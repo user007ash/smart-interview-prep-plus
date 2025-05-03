@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
@@ -458,7 +457,7 @@ const InterviewTest = () => {
               
               <div className="mt-4 md:mt-0 flex items-center">
                 <div className="mr-4">
-                  <div className="text-3xl font-bold text-center">{calculateOverallScore()}%</div>
+                  <div className="text-3xl font-bold text-center">{calculateOverallScore(results)}%</div>
                   <div className="text-sm text-gray-500">Overall Score</div>
                 </div>
                 
@@ -475,7 +474,7 @@ const InterviewTest = () => {
                     />
                     <path 
                       className="circle"
-                      strokeDasharray={`${calculateOverallScore()}, 100`}
+                      strokeDasharray={`${calculateOverallScore(results)}, 100`}
                       d="M18 2.0845
                         a 15.9155 15.9155 0 0 1 0 31.831
                         a 15.9155 15.9155 0 0 1 0 -31.831"
@@ -492,9 +491,9 @@ const InterviewTest = () => {
               <div className="bg-interview-softBg p-4 rounded-lg mb-4">
                 <h2 className="font-semibold mb-1">Overall Assessment</h2>
                 <p className="text-sm">
-                  {calculateOverallScore() >= 80 
+                  {calculateOverallScore(results) >= 80 
                     ? "Excellent performance! You demonstrated strong technical knowledge and communication skills. With some minor improvements, you'll be ready to ace your real interviews."
-                    : calculateOverallScore() >= 70
+                    : calculateOverallScore(results) >= 70
                       ? "Good performance! You showed solid understanding of most topics. Work on being more specific in your examples and elaborating on technical details."
                       : "You have a good foundation, but need more practice. Focus on providing more specific examples and technical details in your answers."}
                 </p>
@@ -502,34 +501,34 @@ const InterviewTest = () => {
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="bg-white p-4 border border-gray-200 rounded-lg">
-                  <div className="text-lg font-bold text-center">{mockResults.filter(r => r.score >= 80).length}</div>
+                  <div className="text-lg font-bold text-center">{results.filter(r => r.score >= 80).length}</div>
                   <div className="text-sm text-gray-500 text-center">Strong Answers</div>
                   <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
                     <div 
                       className="bg-green-500 h-1.5 rounded-full" 
-                      style={{ width: `${(mockResults.filter(r => r.score >= 80).length / mockResults.length) * 100}%` }}
+                      style={{ width: `${(results.filter(r => r.score >= 80).length / results.length) * 100}%` }}
                     ></div>
                   </div>
                 </div>
                 
                 <div className="bg-white p-4 border border-gray-200 rounded-lg">
-                  <div className="text-lg font-bold text-center">{mockResults.filter(r => r.score >= 70 && r.score < 80).length}</div>
+                  <div className="text-lg font-bold text-center">{results.filter(r => r.score >= 70 && r.score < 80).length}</div>
                   <div className="text-sm text-gray-500 text-center">Good Answers</div>
                   <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
                     <div 
                       className="bg-yellow-500 h-1.5 rounded-full" 
-                      style={{ width: `${(mockResults.filter(r => r.score >= 70 && r.score < 80).length / mockResults.length) * 100}%` }}
+                      style={{ width: `${(results.filter(r => r.score >= 70 && r.score < 80).length / results.length) * 100}%` }}
                     ></div>
                   </div>
                 </div>
                 
                 <div className="bg-white p-4 border border-gray-200 rounded-lg">
-                  <div className="text-lg font-bold text-center">{mockResults.filter(r => r.score < 70).length}</div>
+                  <div className="text-lg font-bold text-center">{results.filter(r => r.score < 70).length}</div>
                   <div className="text-sm text-gray-500 text-center">Needs Improvement</div>
                   <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
                     <div 
                       className="bg-red-500 h-1.5 rounded-full" 
-                      style={{ width: `${(mockResults.filter(r => r.score < 70).length / mockResults.length) * 100}%` }}
+                      style={{ width: `${(results.filter(r => r.score < 70).length / results.length) * 100}%` }}
                     ></div>
                   </div>
                 </div>
@@ -539,7 +538,7 @@ const InterviewTest = () => {
             <div className="space-y-6 mb-8">
               <h2 className="text-xl font-semibold">Detailed Question Analysis</h2>
               
-              {mockResults.map((result, index) => (
+              {results.map((result, index) => (
                 <div key={index} className="border border-gray-200 rounded-lg overflow-hidden">
                   <div className="bg-gray-50 p-4 border-b border-gray-200">
                     <div className="flex justify-between items-center">
