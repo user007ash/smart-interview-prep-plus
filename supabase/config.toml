@@ -1,1 +1,5 @@
+
 project_id = "lousxuhyqvxkmyjhzqcj"
+
+[functions.audio-upload]
+verify_jwt = true

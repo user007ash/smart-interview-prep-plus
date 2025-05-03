@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
@@ -402,10 +403,13 @@ const InterviewTest = () => {
               </div>
               
               <div className="flex flex-col items-center justify-center py-6">
-                <SpeechToText onTranscriptUpdate={handleTranscriptUpdate} />
+                <SpeechToText 
+                  onTranscriptUpdate={handleTranscriptUpdate}
+                  currentQuestion={questions[currentQuestionIndex].text}
+                />
                 
                 <div className="w-full max-w-md mt-8">
-                  {currentAnswer && (
+                  {currentAnswer && !isSubmitting && (
                     <div>
                       <h3 className="text-sm font-medium text-gray-700 mb-1">Your Answer (Transcribed)</h3>
                       <div className="p-4 bg-gray-50 rounded-md border border-gray-200 max-h-32 overflow-y-auto">
@@ -421,6 +425,7 @@ const InterviewTest = () => {
               <Button 
                 className="bg-interview-purple hover:bg-interview-darkPurple"
                 onClick={handleNextQuestion}
+                disabled={isSubmitting}
               >
                 {currentQuestionIndex < questions.length - 1 ? 'Next Question' : 'Submit Interview'}
               </Button>

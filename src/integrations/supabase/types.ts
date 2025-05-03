@@ -66,6 +66,33 @@ export type Database = {
         }
         Relationships: []
       }
+      user_answers: {
+        Row: {
+          audio_url: string | null
+          created_at: string
+          id: string
+          question: string
+          transcript: string | null
+          user_id: string
+        }
+        Insert: {
+          audio_url?: string | null
+          created_at?: string
+          id?: string
+          question: string
+          transcript?: string | null
+          user_id: string
+        }
+        Update: {
+          audio_url?: string | null
+          created_at?: string
+          id?: string
+          question?: string
+          transcript?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
