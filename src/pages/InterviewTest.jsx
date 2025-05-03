@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,7 @@ const InterviewTest = () => {
   const [answers, setAnswers] = useState({});
   const [currentAnswer, setCurrentAnswer] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { user } = useAuth();
+  const { user, isAuthenticated, loading } = useAuth();
   const timerRef = useRef(null);
   
   // Mock interview questions
@@ -48,44 +48,49 @@ const InterviewTest = () => {
     },
   ];
   
-  // Mock results
-  const mockResults = [
+  // Mock results format (real results will be generated based on actual answers)
+  const mockResultTemplate = [
     {
       question: "Describe a challenging project where you used React and how you solved the main problems.",
-      answer: "I worked on a data visualization dashboard that needed to render large datasets efficiently. We faced performance issues with re-renders. I implemented React.memo, useMemo and useCallback to optimize component rendering, and used virtualized lists for displaying large data sets. This improved performance by 70%.",
-      score: 85,
-      feedback: "Good specific example with clear problem and solution. Could include more detail on the technical implementation of the optimizations.",
+      answer: "",
+      score: 0,
+      feedback: "",
       idealAnswer: "A strong answer would include a specific project example, clear identification of challenges faced, detailed technical solutions implemented, metrics of success, and lessons learned."
     },
     {
       question: "How do you approach optimizing database queries in MongoDB?",
-      answer: "I start by using MongoDB's built-in explain() method to analyze query performance. Then I focus on creating proper indexes based on common query patterns. I also use projection to limit returned fields and pagination to limit results.",
-      score: 78,
-      feedback: "Covers basic optimization techniques well. Could mention more advanced concepts like compound indexes, aggregation pipeline optimization, or sharding strategies.",
+      answer: "",
+      score: 0,
+      feedback: "",
       idealAnswer: "An ideal answer would include indexing strategies, query structure optimization, data model considerations, use of MongoDB's performance analysis tools, caching strategies, and examples of how these techniques were applied."
     },
     {
       question: "Can you explain your experience with RESTful API design and implementation?",
-      answer: "I've designed and built several RESTful APIs using Node.js and Express. I follow REST principles like using appropriate HTTP methods, statelessness, and resource-based URLs. For authentication, I typically implement JWT. I also ensure proper error handling and documentation.",
-      score: 80,
-      feedback: "Good overview of REST principles and implementation details. Could provide a specific example of an API you've built and challenges faced.",
+      answer: "",
+      score: 0,
+      feedback: "",
       idealAnswer: "A comprehensive answer would cover REST architectural principles, resource modeling, endpoint design, HTTP methods usage, status codes, authentication methods, versioning strategies, documentation approaches, and real-world implementation examples."
     },
     {
       question: "Tell me about a time when you had to refactor code to improve performance.",
-      answer: "On our e-commerce platform, the product search page was taking 5+ seconds to load. I profiled the code and found multiple unnecessary API calls and inefficient rendering. I implemented data caching, debounced search inputs, and optimized our component structure. Load time decreased to under 1 second.",
-      score: 90,
-      feedback: "Excellent answer with a clear situation, actions taken, and measurable results. Good technical specifics on the solutions implemented.",
+      answer: "",
+      score: 0,
+      feedback: "",
       idealAnswer: "A strong answer would identify a specific performance issue, describe the analysis process, detail the refactoring approach, mention specific techniques used, provide metrics of improvement, and share lessons learned."
     },
     {
       question: "How do you stay updated with the latest JavaScript ecosystem developments?",
-      answer: "I follow several JavaScript developers on Twitter, subscribe to newsletters like JavaScript Weekly, and regularly read articles on Medium and Dev.to. I also participate in local meetups and occasionally attend conferences.",
-      score: 72,
-      feedback: "Mentions good resources for staying informed, but could elaborate on how you actually implement new knowledge or evaluate which new technologies to adopt.",
+      answer: "",
+      score: 0,
+      feedback: "",
       idealAnswer: "An ideal answer would include specific information sources (blogs, newsletters, social media), community involvement (meetups, conferences), hands-on learning methods (side projects, courses), and a process for evaluating and adopting new technologies."
     }
   ];
+  
+  // Check if user is authenticated
+  if (!loading && !isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
   
   // Start timer when question begins
   useEffect(() => {
@@ -117,48 +122,111 @@ const InterviewTest = () => {
   };
   
   const handleNextQuestion = () => {
-    // Save current answer
-    if (currentAnswer.trim()) {
-      setAnswers(prev => ({
-        ...prev,
-        [questions[currentQuestionIndex].id]: currentAnswer
-      }));
+    try {
+      // Save current answer
+      if (currentAnswer.trim()) {
+        setAnswers(prev => ({
+          ...prev,
+          [questions[currentQuestionIndex].id]: currentAnswer
+        }));
+      }
+      
+      // Clear current answer
+      setCurrentAnswer('');
+      
+      // Move to next question or results
+      if (currentQuestionIndex < questions.length - 1) {
+        setCurrentQuestionIndex(prev => prev + 1);
+        setTimeLeft(60);
+      } else {
+        setStep('submitting');
+        handleSubmitTest();
+      }
+    } catch (error) {
+      console.error('Error moving to next question:', error);
+      toast.error('An error occurred. Please try again.');
     }
-    
-    // Clear current answer
-    setCurrentAnswer('');
-    
-    // Move to next question or results
-    if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex(prev => prev + 1);
-      setTimeLeft(60);
-    } else {
-      setStep('submitting');
-      handleSubmitTest();
-    }
+  };
+  
+  // Generate simulated feedback and scores based on answer length and content
+  const generateResults = (answers) => {
+    return mockResultTemplate.map((template, index) => {
+      const questionId = questions[index].id;
+      const answer = answers[questionId] || '';
+      
+      // Simple scoring algorithm based on answer length and keyword presence
+      let score = Math.min(Math.floor(answer.length / 10), 60);
+      
+      // Add points for relevant keywords
+      const keywords = ['example', 'specific', 'implemented', 'improved', 'learned', 'strategy', 'approach'];
+      keywords.forEach(keyword => {
+        if (answer.toLowerCase().includes(keyword)) score += 5;
+      });
+      
+      // Cap at 95 to leave room for improvement
+      score = Math.min(score, 95);
+      
+      // Generate feedback based on score
+      let feedback = '';
+      if (score >= 80) {
+        feedback = 'Excellent answer with good structure and specific examples.';
+      } else if (score >= 70) {
+        feedback = 'Good answer, but could include more specific examples and details.';
+      } else {
+        feedback = 'Your answer needs more depth and specific examples to fully address the question.';
+      }
+      
+      return {
+        question: template.question,
+        answer,
+        score,
+        feedback,
+        idealAnswer: template.idealAnswer
+      };
+    });
   };
   
   const handleSubmitTest = async () => {
     setIsSubmitting(true);
     
     try {
-      // If user is logged in, save test results to Supabase
+      // Generate results based on answers
+      const results = generateResults(answers);
+      
       if (user) {
-        // In a real app, you would submit answers to backend for analysis
-        // Here we're using mock results for simplicity
-        
-        const { error } = await supabase.from('test_results').insert({
-          user_id: user.id,
-          ats_score: calculateOverallScore(),
-          total_score: calculateOverallScore(),
-          feedback: JSON.stringify(mockResults),
-        });
-
-        if (error) throw error;
+        try {
+          // Save to Supabase
+          const { error } = await supabase.from('test_results').insert({
+            user_id: user.id,
+            ats_score: calculateOverallScore(results),
+            total_score: calculateOverallScore(results),
+            feedback: JSON.stringify(results),
+          });
+          
+          if (error) {
+            console.error('Supabase save error:', error);
+            toast.error('Error saving results to database. Your results will be available temporarily.');
+            // Save to localStorage as backup
+            localStorage.setItem('last_interview_results', JSON.stringify({
+              timestamp: new Date().toISOString(),
+              results
+            }));
+          } else {
+            toast.success('Test results saved successfully!');
+          }
+        } catch (dbError) {
+          console.error('Database error:', dbError);
+          toast.error('Error connecting to database. Results saved locally.');
+          // Save to localStorage as backup
+          localStorage.setItem('last_interview_results', JSON.stringify({
+            timestamp: new Date().toISOString(),
+            results
+          }));
+        }
       }
       
-      // Simulate API call to analyze answers
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // Simulate API processing time
+      await new Promise(resolve => setTimeout(resolve, 1500));
       
       setStep('results');
     } catch (error) {
@@ -169,9 +237,10 @@ const InterviewTest = () => {
     }
   };
   
-  const calculateOverallScore = () => {
-    const totalScore = mockResults.reduce((acc, result) => acc + result.score, 0);
-    return Math.round(totalScore / mockResults.length);
+  const calculateOverallScore = (results) => {
+    if (!results || results.length === 0) return 0;
+    const totalScore = results.reduce((acc, result) => acc + result.score, 0);
+    return Math.round(totalScore / results.length);
   };
 
   // Handle speech-to-text transcript update
@@ -191,8 +260,8 @@ const InterviewTest = () => {
                 <h2 className="font-semibold text-lg mb-2">How it works</h2>
                 <ul className="list-disc list-inside space-y-2 text-gray-700">
                   <li>You'll answer {questions.length} interview questions based on your resume</li>
-                  <li>You have 1 minute to answer each question</li>
-                  <li>Type your answers as you would speak them in an actual interview</li>
+                  <li>You have 1 minute to answer each question <strong>using your voice</strong></li>
+                  <li>Your voice will be automatically transcribed into text</li>
                   <li>After completing all questions, you'll receive feedback and scores</li>
                 </ul>
               </div>
@@ -237,11 +306,14 @@ const InterviewTest = () => {
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  Tips for Success
+                  Microphone Required
                 </h2>
+                <p className="text-yellow-800 text-sm mb-2">
+                  This interview test uses speech recognition. Please ensure your browser has microphone permissions enabled.
+                </p>
                 <ul className="list-disc list-inside space-y-1 text-yellow-800 text-sm">
-                  <li>Be concise but thorough in your answers</li>
-                  <li>Use the STAR method for behavioral questions (Situation, Task, Action, Result)</li>
+                  <li>Speak clearly and at a normal pace</li>
+                  <li>Use the STAR method for behavioral questions</li>
                   <li>Provide specific examples where possible</li>
                   <li>Focus on your unique skills and experiences</li>
                 </ul>
@@ -326,26 +398,23 @@ const InterviewTest = () => {
             </div>
             
             <div className="mb-6">
-              <div className="p-4 bg-interview-softBg rounded-lg mb-4">
+              <div className="p-4 bg-interview-softBg rounded-lg mb-6">
                 <p className="font-medium">{questions[currentQuestionIndex].text}</p>
               </div>
               
-              <div>
-                <label htmlFor="answer" className="block text-sm font-medium text-gray-700 mb-1">
-                  Your Answer
-                </label>
-                <textarea
-                  id="answer"
-                  rows={8}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-interview-purple focus:border-interview-purple"
-                  placeholder="Type your answer here or use speech-to-text below..."
-                  value={currentAnswer}
-                  onChange={(e) => setCurrentAnswer(e.target.value)}
-                ></textarea>
-              </div>
-
-              <div className="mt-4 flex justify-center">
+              <div className="flex flex-col items-center justify-center py-6">
                 <SpeechToText onTranscriptUpdate={handleTranscriptUpdate} />
+                
+                <div className="w-full max-w-md mt-8">
+                  {currentAnswer && (
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-700 mb-1">Your Answer (Transcribed)</h3>
+                      <div className="p-4 bg-gray-50 rounded-md border border-gray-200 max-h-32 overflow-y-auto">
+                        <p className="text-gray-700">{currentAnswer}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
             
@@ -378,6 +447,7 @@ const InterviewTest = () => {
         );
         
       case 'results':
+        const results = generateResults(answers);
         return (
           <div className="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow-sm border border-gray-100">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
@@ -562,7 +632,13 @@ const InterviewTest = () => {
       <Navbar />
       <div className="min-h-screen bg-gray-50 pt-24 pb-16">
         <div className="container mx-auto px-4">
-          {renderContent()}
+          {loading ? (
+            <div className="flex justify-center items-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-interview-purple"></div>
+            </div>
+          ) : (
+            renderContent()
+          )}
         </div>
       </div>
       <Footer />

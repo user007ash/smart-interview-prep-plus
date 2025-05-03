@@ -2,7 +2,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const AuthContext = createContext();
 
@@ -13,6 +13,7 @@ export const AuthProvider = ({ children }) => {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -36,14 +37,26 @@ export const AuthProvider = ({ children }) => {
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+    const checkSession = async () => {
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       setLoading(false);
-    });
+      
+      // Redirect to login if not authenticated and trying to access protected route
+      const protectedRoutes = ['/dashboard', '/interview-test', '/resume-upload', '/live-interview'];
+      const isProtectedRoute = protectedRoutes.some(route => location.pathname.startsWith(route));
+      
+      if (!currentSession && isProtectedRoute) {
+        toast.error('Please sign in to access this page');
+        navigate('/login');
+      }
+    };
+    
+    checkSession();
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, location]);
 
   // Auth methods
   const signUp = async ({ email, password, name }) => {

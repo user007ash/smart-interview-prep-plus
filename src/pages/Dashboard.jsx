@@ -1,82 +1,160 @@
-
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, Navigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
-  
-  // Mock user data
-  const userData = {
-    name: 'John Doe',
-    email: 'john.doe@example.com',
+  const [userData, setUserData] = useState({
+    name: '',
+    email: '',
     profileImage: null,
-    resumeCount: 2,
-    interviewCount: 5,
-    averageScore: 78,
+  });
+  const [testResults, setTestResults] = useState([]);
+  const [resumes, setResumes] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  const { user, isAuthenticated, loading } = useAuth();
+
+  // Check if user is authenticated
+  if (!loading && !isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+  
+  // Load user data and test results
+  useEffect(() => {
+    const loadUserData = async () => {
+      if (!user) return;
+      
+      try {
+        setIsLoading(true);
+        
+        // Get user profile data
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+          
+        if (profileError && profileError.code !== 'PGRST116') {
+          console.error('Error fetching profile:', profileError);
+          toast.error('Failed to load profile data');
+        }
+        
+        // Get test results
+        const { data: testResultsData, error: testResultsError } = await supabase
+          .from('test_results')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+          
+        if (testResultsError) {
+          console.error('Error fetching test results:', testResultsError);
+          toast.error('Failed to load test history');
+        }
+        
+        // Check localStorage for recent results that might not be in the database yet
+        const localResults = localStorage.getItem('last_interview_results');
+        
+        // Process and set user data
+        setUserData({
+          name: profileData?.full_name || user.user_metadata?.full_name || 'User',
+          email: user.email || '',
+          profileImage: profileData?.avatar_url || null,
+        });
+        
+        // Process test results
+        const processedResults = (testResultsData || []).map(result => {
+          try {
+            // Parse feedback JSON if it exists
+            const feedback = result.feedback ? JSON.parse(result.feedback) : [];
+            return {
+              id: result.id,
+              date: new Date(result.created_at).toLocaleDateString(),
+              questions: feedback.length || 0,
+              score: result.total_score || 0,
+              type: getInterviewTypeFromFeedback(feedback) || 'General',
+              feedback
+            };
+          } catch (e) {
+            console.error('Error parsing result:', e);
+            return {
+              id: result.id,
+              date: new Date(result.created_at).toLocaleDateString(),
+              questions: 0,
+              score: result.total_score || 0,
+              type: 'General',
+              feedback: []
+            };
+          }
+        });
+        
+        setTestResults(processedResults);
+        
+        // Process resumes (mock data for now)
+        setResumes([
+          {
+            id: 1,
+            name: 'Software_Engineer_Resume.pdf',
+            uploadDate: '2023-05-15',
+            atsScore: 85,
+          },
+          {
+            id: 2,
+            name: 'Product_Manager_Resume.pdf',
+            uploadDate: '2023-06-02',
+            atsScore: 72,
+          }
+        ]);
+      } catch (error) {
+        console.error('Dashboard data loading error:', error);
+        toast.error('Error loading dashboard data');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadUserData();
+  }, [user]);
+  
+  // Helper function to determine interview type from feedback
+  const getInterviewTypeFromFeedback = (feedback) => {
+    if (!feedback || feedback.length === 0) return 'General';
+    
+    // Count question types
+    const typeCounts = feedback.reduce((counts, item) => {
+      if (item.question && item.question.toLowerCase().includes('technical')) {
+        counts.technical = (counts.technical || 0) + 1;
+      } else if (item.question && item.question.toLowerCase().includes('behavior')) {
+        counts.behavioral = (counts.behavioral || 0) + 1;
+      } else {
+        counts.general = (counts.general || 0) + 1;
+      }
+      return counts;
+    }, {});
+    
+    // Determine dominant type
+    const max = Math.max(
+      typeCounts.technical || 0, 
+      typeCounts.behavioral || 0, 
+      typeCounts.general || 0
+    );
+    
+    if (max === typeCounts.technical) return 'Technical';
+    if (max === typeCounts.behavioral) return 'Behavioral';
+    return 'General';
   };
   
-  // Mock resumes
-  const resumes = [
-    {
-      id: 1,
-      name: 'Software_Engineer_Resume.pdf',
-      uploadDate: '2023-05-15',
-      atsScore: 85,
-    },
-    {
-      id: 2,
-      name: 'Product_Manager_Resume.pdf',
-      uploadDate: '2023-06-02',
-      atsScore: 72,
-    }
-  ];
-  
-  // Mock interviews
-  const interviews = [
-    {
-      id: 1,
-      title: 'Software Engineer Interview',
-      date: '2023-05-20',
-      questions: 8,
-      score: 82,
-      type: 'Technical'
-    },
-    {
-      id: 2,
-      title: 'Product Manager Interview',
-      date: '2023-06-05',
-      questions: 10,
-      score: 75,
-      type: 'HR'
-    },
-    {
-      id: 3,
-      title: 'Frontend Developer Interview',
-      date: '2023-06-15',
-      questions: 6,
-      score: 88,
-      type: 'Technical'
-    },
-    {
-      id: 4,
-      title: 'Full Stack Developer Interview',
-      date: '2023-06-22',
-      questions: 12,
-      score: 65,
-      type: 'Technical'
-    },
-    {
-      id: 5,
-      title: 'Leadership Questions',
-      date: '2023-06-30',
-      questions: 5,
-      score: 80,
-      type: 'Behavioral'
-    }
-  ];
+  // Calculate average score
+  const calculateAverageScore = () => {
+    if (testResults.length === 0) return 0;
+    const sum = testResults.reduce((total, result) => total + result.score, 0);
+    return Math.round(sum / testResults.length);
+  };
   
   // Render tab content based on active tab
   const renderTabContent = () => {
@@ -88,7 +166,7 @@ const Dashboard = () => {
               <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
                 <h3 className="text-gray-500 text-sm font-medium mb-2">Uploaded Resumes</h3>
                 <div className="flex items-end justify-between">
-                  <span className="text-3xl font-bold">{userData.resumeCount}</span>
+                  <span className="text-3xl font-bold">{resumes.length}</span>
                   <Link to="/resume-upload" className="text-interview-purple text-sm hover:underline">Upload New</Link>
                 </div>
               </div>
@@ -96,7 +174,7 @@ const Dashboard = () => {
               <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
                 <h3 className="text-gray-500 text-sm font-medium mb-2">Completed Interviews</h3>
                 <div className="flex items-end justify-between">
-                  <span className="text-3xl font-bold">{userData.interviewCount}</span>
+                  <span className="text-3xl font-bold">{testResults.length}</span>
                   <Link to="/interview-test" className="text-interview-purple text-sm hover:underline">Start New</Link>
                 </div>
               </div>
@@ -104,7 +182,7 @@ const Dashboard = () => {
               <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
                 <h3 className="text-gray-500 text-sm font-medium mb-2">Average Score</h3>
                 <div className="flex items-end">
-                  <span className="text-3xl font-bold">{userData.averageScore}%</span>
+                  <span className="text-3xl font-bold">{calculateAverageScore()}%</span>
                 </div>
               </div>
             </div>
@@ -136,33 +214,44 @@ const Dashboard = () => {
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
-                        {resumes.map((resume) => (
-                          <tr key={resume.id}>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                              {resume.name}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {resume.uploadDate}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex items-center">
-                                <span className="text-sm text-gray-900 mr-2">{resume.atsScore}%</span>
-                                <div className="w-16 bg-gray-200 rounded-full h-2">
-                                  <div
-                                    className={`h-2 rounded-full ${
-                                      resume.atsScore >= 80 ? 'bg-green-500' : 
-                                      resume.atsScore >= 70 ? 'bg-yellow-500' : 'bg-red-500'
-                                    }`}
-                                    style={{ width: `${resume.atsScore}%` }}
-                                  ></div>
+                        {resumes.length > 0 ? (
+                          resumes.map((resume) => (
+                            <tr key={resume.id}>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                {resume.name}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {resume.uploadDate}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex items-center">
+                                  <span className="text-sm text-gray-900 mr-2">{resume.atsScore}%</span>
+                                  <div className="w-16 bg-gray-200 rounded-full h-2">
+                                    <div
+                                      className={`h-2 rounded-full ${
+                                        resume.atsScore >= 80 ? 'bg-green-500' : 
+                                        resume.atsScore >= 70 ? 'bg-yellow-500' : 'bg-red-500'
+                                      }`}
+                                      style={{ width: `${resume.atsScore}%` }}
+                                    ></div>
+                                  </div>
                                 </div>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              <button className="text-interview-purple hover:underline">View</button>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <button className="text-interview-purple hover:underline">View</button>
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan="4" className="px-6 py-4 text-center text-sm text-gray-500">
+                              No resumes uploaded yet. 
+                              <Link to="/resume-upload" className="text-interview-purple hover:underline ml-1">
+                                Upload your first resume
+                              </Link>
                             </td>
                           </tr>
-                        ))}
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -181,10 +270,10 @@ const Dashboard = () => {
                       <thead className="bg-gray-50">
                         <tr>
                           <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Title
+                            Date
                           </th>
                           <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Date
+                            Questions
                           </th>
                           <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Score
@@ -195,38 +284,49 @@ const Dashboard = () => {
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
-                        {interviews.slice(0, 4).map((interview) => (
-                          <tr key={interview.id}>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                              {interview.title}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {interview.date}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex items-center">
-                                <span className="text-sm text-gray-900 mr-2">{interview.score}%</span>
-                                <div className="w-16 bg-gray-200 rounded-full h-2">
-                                  <div
-                                    className={`h-2 rounded-full ${
-                                      interview.score >= 80 ? 'bg-green-500' : 
-                                      interview.score >= 70 ? 'bg-yellow-500' : 'bg-red-500'
-                                    }`}
-                                    style={{ width: `${interview.score}%` }}
-                                  ></div>
+                        {testResults.length > 0 ? (
+                          testResults.slice(0, 4).map((result) => (
+                            <tr key={result.id}>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                {result.date}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {result.questions}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex items-center">
+                                  <span className="text-sm text-gray-900 mr-2">{result.score}%</span>
+                                  <div className="w-16 bg-gray-200 rounded-full h-2">
+                                    <div
+                                      className={`h-2 rounded-full ${
+                                        result.score >= 80 ? 'bg-green-500' : 
+                                        result.score >= 70 ? 'bg-yellow-500' : 'bg-red-500'
+                                      }`}
+                                      style={{ width: `${result.score}%` }}
+                                    ></div>
+                                  </div>
                                 </div>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              <span className={`px-2 py-1 rounded-full text-xs ${
-                                interview.type === 'Technical' ? 'bg-blue-100 text-blue-800' : 
-                                interview.type === 'HR' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'
-                              }`}>
-                                {interview.type}
-                              </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <span className={`px-2 py-1 rounded-full text-xs ${
+                                  result.type === 'Technical' ? 'bg-blue-100 text-blue-800' : 
+                                  result.type === 'Behavioral' ? 'bg-green-100 text-green-800' : 'bg-purple-100 text-purple-800'
+                                }`}>
+                                  {result.type}
+                                </span>
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan="4" className="px-6 py-4 text-center text-sm text-gray-500">
+                              No interview tests completed yet. 
+                              <Link to="/interview-test" className="text-interview-purple hover:underline ml-1">
+                                Take your first test
+                              </Link>
                             </td>
                           </tr>
-                        ))}
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -475,6 +575,18 @@ const Dashboard = () => {
     }
   };
   
+  if (loading || isLoading) {
+    return (
+      <>
+        <Navbar />
+        <div className="min-h-screen bg-gray-50 pt-20 pb-16 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-interview-purple"></div>
+        </div>
+        <Footer />
+      </>
+    );
+  }
+  
   return (
     <>
       <Navbar />
@@ -531,64 +643,4 @@ const Dashboard = () => {
                     onClick={() => setActiveTab('settings')}
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    <span>Settings</span>
-                  </button>
-                  
-                  <Link 
-                    to="/resume-upload"
-                    className="w-full flex items-center space-x-3 px-3 py-2 rounded-md text-left text-gray-600 hover:bg-gray-50"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    <span>Resume Upload</span>
-                  </Link>
-                  
-                  <Link 
-                    to="/interview-test"
-                    className="w-full flex items-center space-x-3 px-3 py-2 rounded-md text-left text-gray-600 hover:bg-gray-50"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <span>Interview Tests</span>
-                  </Link>
-                  
-                  <Link 
-                    to="/live-interview"
-                    className="w-full flex items-center space-x-3 px-3 py-2 rounded-md text-left text-gray-600 hover:bg-gray-50"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                    <span>Live Interview</span>
-                  </Link>
-                  
-                  <Link 
-                    to="/login"
-                    className="w-full flex items-center space-x-3 px-3 py-2 rounded-md text-left text-gray-600 hover:bg-gray-50"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                    </svg>
-                    <span>Logout</span>
-                  </Link>
-                </nav>
-              </div>
-            </div>
-            
-            <div className="flex-1">
-              {renderTabContent()}
-            </div>
-          </div>
-        </div>
-      </div>
-      <Footer />
-    </>
-  );
-};
-
-export default Dashboard;
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.06
