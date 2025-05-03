@@ -1,73 +1,66 @@
-# Welcome to your Lovable project
 
-## Project info
+# AI-Powered Interview Preparation Platform
 
-**URL**: https://lovable.dev/projects/9f9927a5-c52b-49b5-88a5-aa226c9c8a91
+A full-stack web application that helps users prepare for job interviews using AI-powered tools, including resume analysis, mock interviews, and live interview practice with webcam and microphone.
 
-## How can I edit this code?
+## Features
 
-There are several ways of editing your application.
+- **Resume Upload & Analysis**: Upload your resume for ATS scoring, keyword extraction, and personalized interview questions.
+- **Interview Practice Tests**: Take timed interview tests with personalized questions based on your resume.
+- **Live Interview Simulation**: Practice interviews using your webcam and microphone with AI feedback.
+- **User Authentication**: Create an account to save your resume, interview history, and performance metrics.
+- **Performance Analytics**: Track your progress and get suggestions for improvement.
 
-**Use Lovable**
+## Tech Stack
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/9f9927a5-c52b-49b5-88a5-aa226c9c8a91) and start prompting.
+- **Frontend**: React, Tailwind CSS, shadcn/ui components
+- **Backend**: Mock API endpoints (to be implemented with Express.js and MongoDB)
+- **AI Integration**: Mock API for Groq LLM endpoints
 
-Changes made via Lovable will be committed automatically to this repo.
+## Project Structure
 
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```
+src/
+├── components/      # Reusable UI components
+├── pages/           # Page components for each route
+├── lib/             # Utility functions and helpers
+├── App.tsx          # Main application component with routing
+└── main.tsx         # Application entry point
 ```
 
-**Edit a file directly in GitHub**
+## Setup Instructions
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+1. **Clone the repository**
+   ```
+   git clone <repository-url>
+   cd interview-prep-platform
+   ```
 
-**Use GitHub Codespaces**
+2. **Install dependencies**
+   ```
+   npm install
+   ```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+3. **Start the development server**
+   ```
+   npm run dev
+   ```
 
-## What technologies are used for this project?
+4. **Open your browser**
+   Navigate to `http://localhost:8080` to see the application.
 
-This project is built with:
+## Future Enhancements
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+- Backend implementation with Express.js and MongoDB
+- Real AI integration with Groq LLM for resume parsing and question generation
+- Video recording and analysis of mock interviews
+- Meeting scheduling for peer interview practice
+- Industry-specific question banks
 
-## How can I deploy this project?
+## License
 
-Simply open [Lovable](https://lovable.dev/projects/9f9927a5-c52b-49b5-88a5-aa226c9c8a91) and click on Share -> Publish.
+MIT License
 
-## Can I connect a custom domain to my Lovable project?
+## Contributors
 
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+- Your Name
