@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 const AuthForm = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -11,6 +12,7 @@ const AuthForm = () => {
     name: '',
   });
   const [isLoading, setIsLoading] = useState(false);
+  const { signIn, signUp } = useAuth();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -32,16 +34,29 @@ const AuthForm = () => {
     }
 
     try {
-      // Mock API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Show success message
-      toast.success(isLogin ? 'Login successful!' : 'Account created successfully!');
-      
-      // Redirect to dashboard (would be handled with actual auth logic)
       if (isLogin) {
-        window.location.href = '/dashboard';
+        const { success } = await signIn({
+          email: formData.email,
+          password: formData.password
+        });
+        
+        if (!success) {
+          setIsLoading(false);
+          return;
+        }
       } else {
+        const { success } = await signUp({
+          email: formData.email,
+          password: formData.password,
+          name: formData.name
+        });
+        
+        if (!success) {
+          setIsLoading(false);
+          return;
+        }
+        
+        toast.success('Account created! Please check your email to confirm your registration.');
         setIsLogin(true);
       }
     } catch (error) {

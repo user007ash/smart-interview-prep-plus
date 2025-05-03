@@ -5,6 +5,9 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import SpeechToText from '../components/SpeechToText';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 const InterviewTest = () => {
   const [step, setStep] = useState('intro'); // intro, preview, question, results
@@ -13,6 +16,7 @@ const InterviewTest = () => {
   const [answers, setAnswers] = useState({});
   const [currentAnswer, setCurrentAnswer] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { user } = useAuth();
   const timerRef = useRef(null);
   
   // Mock interview questions
@@ -138,6 +142,21 @@ const InterviewTest = () => {
     setIsSubmitting(true);
     
     try {
+      // If user is logged in, save test results to Supabase
+      if (user) {
+        // In a real app, you would submit answers to backend for analysis
+        // Here we're using mock results for simplicity
+        
+        const { error } = await supabase.from('test_results').insert({
+          user_id: user.id,
+          ats_score: calculateOverallScore(),
+          total_score: calculateOverallScore(),
+          feedback: JSON.stringify(mockResults),
+        });
+
+        if (error) throw error;
+      }
+      
       // Simulate API call to analyze answers
       await new Promise(resolve => setTimeout(resolve, 3000));
       
@@ -153,6 +172,11 @@ const InterviewTest = () => {
   const calculateOverallScore = () => {
     const totalScore = mockResults.reduce((acc, result) => acc + result.score, 0);
     return Math.round(totalScore / mockResults.length);
+  };
+
+  // Handle speech-to-text transcript update
+  const handleTranscriptUpdate = (transcript) => {
+    setCurrentAnswer(transcript);
   };
   
   const renderContent = () => {
@@ -314,10 +338,14 @@ const InterviewTest = () => {
                   id="answer"
                   rows={8}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-interview-purple focus:border-interview-purple"
-                  placeholder="Type your answer here..."
+                  placeholder="Type your answer here or use speech-to-text below..."
                   value={currentAnswer}
                   onChange={(e) => setCurrentAnswer(e.target.value)}
                 ></textarea>
+              </div>
+
+              <div className="mt-4 flex justify-center">
+                <SpeechToText onTranscriptUpdate={handleTranscriptUpdate} />
               </div>
             </div>
             

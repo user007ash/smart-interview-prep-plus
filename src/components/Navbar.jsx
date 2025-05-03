@@ -2,10 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
+import { useAuth } from '@/contexts/AuthContext';
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { isAuthenticated, signOut } = useAuth();
 
   // Check if user is scrolling down to change navbar style
   useEffect(() => {
@@ -34,8 +36,23 @@ const Navbar = () => {
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center space-x-8">
           <Link to="/" className="text-gray-700 hover:text-interview-purple transition-colors">Home</Link>
-          <Link to="/about" className="text-gray-700 hover:text-interview-purple transition-colors">About Us</Link>
-          <Link to="/login" className="text-gray-700 hover:text-interview-purple transition-colors">Login</Link>
+          <Link to="/about-us" className="text-gray-700 hover:text-interview-purple transition-colors">About Us</Link>
+          
+          {isAuthenticated ? (
+            <>
+              <Link to="/dashboard" className="text-gray-700 hover:text-interview-purple transition-colors">Dashboard</Link>
+              <Button 
+                variant="ghost" 
+                className="text-gray-700 hover:text-interview-purple"
+                onClick={signOut}
+              >
+                Logout
+              </Button>
+            </>
+          ) : (
+            <Link to="/login" className="text-gray-700 hover:text-interview-purple transition-colors">Login</Link>
+          )}
+          
           <Button asChild>
             <Link to="/resume-upload" className="bg-interview-purple hover:bg-interview-darkPurple transition-colors">
               Get Started
@@ -72,19 +89,42 @@ const Navbar = () => {
               Home
             </Link>
             <Link 
-              to="/about" 
+              to="/about-us" 
               className="text-gray-700 hover:text-interview-purple transition-colors py-2"
               onClick={() => setMobileMenuOpen(false)}
             >
               About Us
             </Link>
-            <Link 
-              to="/login" 
-              className="text-gray-700 hover:text-interview-purple transition-colors py-2"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Login
-            </Link>
+            
+            {isAuthenticated ? (
+              <>
+                <Link 
+                  to="/dashboard" 
+                  className="text-gray-700 hover:text-interview-purple transition-colors py-2"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Dashboard
+                </Link>
+                <button 
+                  className="text-left text-gray-700 hover:text-interview-purple transition-colors py-2"
+                  onClick={() => {
+                    signOut();
+                    setMobileMenuOpen(false);
+                  }}
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <Link 
+                to="/login" 
+                className="text-gray-700 hover:text-interview-purple transition-colors py-2"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Login
+              </Link>
+            )}
+            
             <Link 
               to="/resume-upload" 
               className="bg-interview-purple text-white py-2 px-4 rounded w-full text-center"
