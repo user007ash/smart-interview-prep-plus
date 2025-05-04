@@ -8,63 +8,119 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+/**
+ * Handle CORS preflight requests
+ */
+const handleCORS = () => {
+  return new Response(null, { headers: corsHeaders });
+};
+
+/**
+ * Error response helper
+ */
+const errorResponse = (message: string, status = 400) => {
+  return new Response(
+    JSON.stringify({ 
+      success: false, 
+      error: message 
+    }),
+    { 
+      status, 
+      headers: { 
+        ...corsHeaders,
+        'Content-Type': 'application/json' 
+      } 
+    }
+  );
+};
+
+/**
+ * Success response helper
+ */
+const successResponse = (data: Record<string, unknown>) => {
+  return new Response(
+    JSON.stringify({ 
+      success: true, 
+      ...data
+    }),
+    { 
+      headers: { 
+        ...corsHeaders,
+        'Content-Type': 'application/json' 
+      } 
+    }
+  );
+};
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return handleCORS();
   }
 
   try {
     // Get the request data
-    const formData = await req.formData()
-    const audioFile = formData.get('audio') as File
-    const questionText = formData.get('question') as string
-    const authorization = req.headers.get('Authorization') || ''
+    const formData = await req.formData();
+    const audioFile = formData.get('audio') as File;
+    const questionText = formData.get('question') as string;
+    const authorization = req.headers.get('Authorization') || '';
 
+    // Input validation
     if (!audioFile) {
-      throw new Error('No audio file provided')
+      return errorResponse('No audio file provided');
     }
 
     if (!questionText) {
-      throw new Error('No question text provided')
+      return errorResponse('No question text provided');
+    }
+
+    if (!authorization) {
+      return errorResponse('Authorization token is required', 401);
     }
 
     // Create a Supabase client
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") || ''
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ''
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    
+    if (!supabaseUrl || !supabaseKey) {
+      return errorResponse('Server configuration error', 500);
+    }
+    
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Get user from JWT token
-    const jwt = authorization.replace('Bearer ', '')
-    const { data: { user }, error: userError } = await supabase.auth.getUser(jwt)
+    const jwt = authorization.replace('Bearer ', '');
+    const { data: { user }, error: userError } = await supabase.auth.getUser(jwt);
 
     if (userError || !user) {
-      throw new Error('Unauthorized: ' + (userError?.message || 'No user found'))
+      return errorResponse('Unauthorized: ' + (userError?.message || 'Auth session missing!'), 401);
     }
 
     // Create a folder path with user ID
-    const userId = user.id
-    const timestamp = new Date().getTime()
-    const fileExt = audioFile.name.split('.').pop()
-    const filePath = `${userId}/${timestamp}.${fileExt}`
+    const userId = user.id;
+    const timestamp = new Date().getTime();
+    const fileExt = audioFile.name.split('.').pop();
+    const filePath = `${userId}/${timestamp}.${fileExt}`;
 
     // Upload the audio file to Supabase Storage
     const { data: storageData, error: storageError } = await supabase
       .storage
       .from('interview_audio')
       .upload(filePath, audioFile, {
-        contentType: audioFile.type
-      })
+        contentType: audioFile.type,
+        cacheControl: '3600'
+      });
 
     if (storageError) {
-      throw new Error('Storage upload failed: ' + storageError.message)
+      console.error('Storage upload error:', storageError);
+      return errorResponse('Storage upload failed: ' + storageError.message, 500);
     }
 
     // Get the public URL
     const { data: { publicUrl } } = supabase
       .storage
       .from('interview_audio')
-      .getPublicUrl(filePath)
+      .getPublicUrl(filePath);
 
     // Store the answer metadata in the database
     const { data: answerData, error: answerError } = await supabase
@@ -75,41 +131,21 @@ serve(async (req) => {
         audio_url: publicUrl,
         transcript: formData.get('transcript') || null
       })
-      .select()
+      .select();
 
     if (answerError) {
-      throw new Error('Database insert failed: ' + answerError.message)
+      console.error('Database insert error:', answerError);
+      return errorResponse('Database insert failed: ' + answerError.message, 500);
     }
 
     // Return success response
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: 'Audio uploaded successfully',
-        audioUrl: publicUrl,
-        answerId: answerData[0].id
-      }),
-      { 
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json' 
-        } 
-      }
-    )
+    return successResponse({ 
+      message: 'Audio uploaded successfully',
+      audioUrl: publicUrl,
+      answerId: answerData[0].id
+    });
   } catch (error) {
-    console.error('Audio upload error:', error)
-    return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error.message 
-      }),
-      { 
-        status: 400,
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json' 
-        } 
-      }
-    )
+    console.error('Audio upload error:', error);
+    return errorResponse(error.message || 'Unknown error occurred', 500);
   }
-})
+});
