@@ -85,7 +85,17 @@ const Dashboard = () => {
   // Render loading state
   if (loading || dataLoading) {
     return (
-      <DashboardLayout>
+      <DashboardLayout
+        // Pass empty userData object to avoid undefined errors
+        userData={{
+          name: 'Loading...',
+          email: '',
+        }}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        memberSince="Loading..."
+        refreshData={refreshData}
+      >
         <div className="min-h-screen bg-gray-50 pt-20 pb-16 flex items-center justify-center">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-interview-purple"></div>
         </div>

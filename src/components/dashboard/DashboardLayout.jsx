@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Settings } from 'lucide-react';
 
 const DashboardLayout = ({ 
-  userData, 
+  userData = {}, // Provide default empty object
   activeTab, 
   setActiveTab, 
   memberSince, 
@@ -14,6 +14,11 @@ const DashboardLayout = ({
   refreshData, 
   children 
 }) => {
+  // Make sure userData and its properties have fallback values
+  const userName = userData?.name || 'User';
+  const userEmail = userData?.email || '';
+  const userInitial = userName ? userName.charAt(0) : 'U';
+
   return (
     <>
       <Navbar />
@@ -25,11 +30,11 @@ const DashboardLayout = ({
               <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-6 sticky top-24 transition-shadow duration-300 hover:shadow-md">
                 <div className="flex items-center space-x-3 mb-8">
                   <div className="w-12 h-12 bg-interview-softBg rounded-full flex items-center justify-center text-lg text-interview-purple font-semibold">
-                    {userData.name.charAt(0)}
+                    {userInitial}
                   </div>
                   <div>
-                    <h2 className="font-semibold">{userData.name}</h2>
-                    <p className="text-sm text-gray-600">{userData.email}</p>
+                    <h2 className="font-semibold">{userName}</h2>
+                    <p className="text-sm text-gray-600">{userEmail}</p>
                   </div>
                 </div>
                 
@@ -40,7 +45,7 @@ const DashboardLayout = ({
                 
                 <div className="mb-6 pb-6 border-b border-gray-200">
                   <div className="text-sm text-gray-500 mb-1">Member Since</div>
-                  <div className="font-medium">{memberSince}</div>
+                  <div className="font-medium">{memberSince || 'N/A'}</div>
                 </div>
                 
                 <nav className="space-y-1">
