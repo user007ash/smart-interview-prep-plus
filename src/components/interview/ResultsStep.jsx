@@ -2,12 +2,22 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Info } from 'lucide-react';
 
 const ResultsStep = ({ results }) => {
   const calculateOverallScore = (results) => {
     if (!results || results.length === 0) return 0;
     const totalScore = results.reduce((acc, result) => acc + result.score, 0);
     return Math.round(totalScore / results.length);
+  };
+
+  const calculateOverallATSScore = (results) => {
+    if (!results || results.length === 0) return 0;
+    const atsScores = results.filter(r => r.ats_score !== undefined);
+    if (atsScores.length === 0) return 0;
+    const totalScore = atsScores.reduce((acc, result) => acc + result.ats_score, 0);
+    return Math.round(totalScore / atsScores.length);
   };
 
   return (
@@ -18,10 +28,10 @@ const ResultsStep = ({ results }) => {
           <p className="text-gray-600">Here's how you performed on your practice interview</p>
         </div>
         
-        <div className="mt-4 md:mt-0 flex items-center">
-          <div className="mr-4">
+        <div className="mt-4 md:mt-0 flex items-center gap-4">
+          <div>
             <div className="text-3xl font-bold text-center">{calculateOverallScore(results)}%</div>
-            <div className="text-sm text-gray-500">Overall Score</div>
+            <div className="text-sm text-gray-500">Interview Score</div>
           </div>
           
           <div className="w-20 h-20">
@@ -46,6 +56,25 @@ const ResultsStep = ({ results }) => {
                 strokeWidth="3"
               />
             </svg>
+          </div>
+
+          <div>
+            <div className="text-3xl font-bold text-center">{calculateOverallATSScore(results)}%</div>
+            <div className="text-sm text-gray-500 flex items-center gap-1">
+              ATS Score
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button className="text-gray-400 hover:text-gray-600">
+                      <Info className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p>ATS Score measures how well your answers would perform in Applicant Tracking Systems by evaluating keyword usage, action verbs, and overall content quality.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
           </div>
         </div>
       </div>
@@ -106,13 +135,21 @@ const ResultsStep = ({ results }) => {
             <div className="bg-gray-50 p-4 border-b border-gray-200">
               <div className="flex justify-between items-center">
                 <h3 className="font-medium">Question {index + 1}</h3>
-                <div className="flex items-center">
+                <div className="flex items-center gap-2">
                   <div className={`px-2 py-1 rounded-full text-xs ${
                     result.score >= 80 ? 'bg-green-100 text-green-800' : 
                     result.score >= 70 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
                   }`}>
-                    Score: {result.score}%
+                    Interview: {result.score}%
                   </div>
+                  {result.ats_score !== undefined && (
+                    <div className={`px-2 py-1 rounded-full text-xs ${
+                      result.ats_score >= 80 ? 'bg-blue-100 text-blue-800' : 
+                      result.ats_score >= 70 ? 'bg-indigo-100 text-indigo-800' : 'bg-purple-100 text-purple-800'
+                    }`}>
+                      ATS: {result.ats_score}%
+                    </div>
+                  )}
                 </div>
               </div>
               <p className="mt-2">{result.question}</p>
@@ -122,8 +159,15 @@ const ResultsStep = ({ results }) => {
               <h4 className="text-sm font-medium text-gray-500 mb-1">Your Answer</h4>
               <p className="text-gray-700 mb-4">{result.answer}</p>
               
-              <h4 className="text-sm font-medium text-gray-500 mb-1">Feedback</h4>
+              <h4 className="text-sm font-medium text-gray-500 mb-1">Interview Feedback</h4>
               <p className="text-gray-700 mb-4">{result.feedback}</p>
+
+              {result.ats_feedback && (
+                <>
+                  <h4 className="text-sm font-medium text-gray-500 mb-1">ATS Feedback</h4>
+                  <p className="text-gray-700 mb-4">{result.ats_feedback}</p>
+                </>
+              )}
               
               <div className="bg-blue-50 p-4 rounded-lg">
                 <h4 className="text-sm font-medium text-blue-800 mb-1">Ideal Answer Structure</h4>
@@ -146,9 +190,9 @@ const ResultsStep = ({ results }) => {
           </div>
           
           <div className="bg-white p-4 rounded-lg border border-gray-200">
-            <h3 className="font-medium mb-2">Technical Depth</h3>
+            <h3 className="font-medium mb-2">Use Action Verbs</h3>
             <p className="text-gray-600 text-sm">
-              Demonstrate deeper technical knowledge by explaining not just what you did, but how you did it.
+              Incorporate strong action verbs like "led," "developed," "implemented" to make your answers more impactful.
             </p>
           </div>
           
@@ -160,9 +204,9 @@ const ResultsStep = ({ results }) => {
           </div>
           
           <div className="bg-white p-4 rounded-lg border border-gray-200">
-            <h3 className="font-medium mb-2">Time Management</h3>
+            <h3 className="font-medium mb-2">Reduce Filler Words</h3>
             <p className="text-gray-600 text-sm">
-              Practice giving more concise answers to ensure you cover all key points within the time limit.
+              Minimize using words like "um," "uh," "like," "you know" to sound more confident and professional.
             </p>
           </div>
         </div>

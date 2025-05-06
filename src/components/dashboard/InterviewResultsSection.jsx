@@ -5,6 +5,8 @@ import { formatDate } from '@/utils/dashboardUtils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Info } from 'lucide-react';
 
 const InterviewResultsSection = ({ results, loading }) => {
   if (loading) {
@@ -36,7 +38,24 @@ const InterviewResultsSection = ({ results, loading }) => {
               <TableRow>
                 <TableHead>Date</TableHead>
                 <TableHead>Questions</TableHead>
-                <TableHead>Score</TableHead>
+                <TableHead>Interview Score</TableHead>
+                <TableHead>
+                  <div className="flex items-center gap-1">
+                    ATS Score
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button className="text-gray-400 hover:text-gray-600">
+                            <Info className="h-4 w-4" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          <p>ATS Score measures how well your answers match job descriptions using keywords, action verbs, and proper grammar.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                </TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
@@ -56,6 +75,20 @@ const InterviewResultsSection = ({ results, loading }) => {
                             (result.score || result.total_score || 0) >= 70 ? 'bg-yellow-500' : 'bg-red-500'
                           }`}
                           style={{ width: `${result.score || result.total_score || 0}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center">
+                      <span className="text-sm mr-2">{result.atsScore || result.ats_score || 0}%</span>
+                      <div className="w-16 bg-gray-200 rounded-full h-2">
+                        <div
+                          className={`h-2 rounded-full ${
+                            (result.atsScore || result.ats_score || 0) >= 80 ? 'bg-blue-500' : 
+                            (result.atsScore || result.ats_score || 0) >= 70 ? 'bg-indigo-500' : 'bg-purple-500'
+                          }`}
+                          style={{ width: `${result.atsScore || result.ats_score || 0}%` }}
                         ></div>
                       </div>
                     </div>

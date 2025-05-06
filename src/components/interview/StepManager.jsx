@@ -18,7 +18,8 @@ const StepManager = ({
   isSubmitting, 
   currentAnswer,
   onTranscriptUpdate,
-  answers
+  answers,
+  results
 }) => {
   switch (step) {
     case 'intro':
@@ -44,8 +45,9 @@ const StepManager = ({
       return <SubmittingStep />;
       
     case 'results':
-      const results = generateResults(answers, questions);
-      return <ResultsStep results={results} />;
+      // Use pregenerated results if available, otherwise generate them
+      const displayResults = results || generateResults(answers, questions);
+      return <ResultsStep results={displayResults} />;
       
     default:
       return null;

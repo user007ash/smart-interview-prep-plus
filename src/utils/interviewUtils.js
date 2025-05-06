@@ -38,6 +38,126 @@ export const calculateOverallScore = (results) => {
   return Math.round(sum / results.length);
 };
 
+// ATS Score Calculation based on transcript content
+export const calculateATSScore = (transcript, jobKeywords = []) => {
+  // Default job keywords if none provided
+  const defaultJobKeywords = [
+    "team", "project", "develop", "solution", "experience", 
+    "technical", "collaborate", "implement", "result", "success"
+  ];
+  
+  // Use provided keywords or defaults
+  const keywords = jobKeywords.length > 0 ? jobKeywords : defaultJobKeywords;
+  
+  // If no transcript, return a default score
+  if (!transcript || transcript.trim() === '') {
+    return 65;
+  }
+  
+  const words = transcript.toLowerCase().split(/\s+/);
+  const actionVerbs = [
+    "led", "managed", "developed", "built", "designed", "launched", 
+    "created", "implemented", "achieved", "improved", "reduced", 
+    "increased", "coordinated", "delivered", "established", "generated"
+  ];
+  
+  const fillerWords = [
+    "um", "uh", "like", "you know", "basically", "actually", 
+    "literally", "sort of", "kind of", "i mean", "so", "right"
+  ];
+  
+  // Initial score
+  let score = 100;
+  
+  // Calculate matches
+  let keywordMatchCount = keywords.filter(k => 
+    transcript.toLowerCase().includes(k.toLowerCase())
+  ).length;
+  
+  let actionVerbCount = actionVerbs.filter(v => 
+    transcript.toLowerCase().includes(v)
+  ).length;
+  
+  let fillerCount = fillerWords.reduce((count, filler) => {
+    // Count occurrences of each filler word or phrase
+    const regex = new RegExp(`\\b${filler}\\b`, 'gi');
+    const matches = transcript.match(regex);
+    return count + (matches ? matches.length : 0);
+  }, 0);
+  
+  // Adjust score based on factors
+  
+  // 1. Answer length
+  if (words.length < 20) {
+    score -= 15; // Significant penalty for very short answers
+  } else if (words.length < 50) {
+    score -= 5; // Small penalty for somewhat short answers
+  }
+  
+  // 2. Filler words
+  if (fillerCount > 0) {
+    // Calculate filler word density (percentage of total words)
+    const fillerDensity = fillerCount / words.length;
+    // Penalty increases with density
+    score -= Math.min(25, Math.round(fillerDensity * 100)); 
+  }
+  
+  // 3. Action verbs
+  const expectedActionVerbs = Math.max(1, Math.floor(words.length / 75)); // Expect more action verbs in longer answers
+  if (actionVerbCount < expectedActionVerbs) {
+    score -= Math.min(15, (expectedActionVerbs - actionVerbCount) * 5);
+  } else {
+    // Bonus for good use of action verbs
+    score += Math.min(5, actionVerbCount - expectedActionVerbs);
+  }
+  
+  // 4. Keywords
+  const expectedKeywordMatches = Math.max(1, Math.ceil(keywords.length * 0.3)); // Expect at least 30% of keywords
+  if (keywordMatchCount < expectedKeywordMatches) {
+    score -= Math.min(20, (expectedKeywordMatches - keywordMatchCount) * 3);
+  } else {
+    // Bonus for good keyword usage
+    score += Math.min(5, keywordMatchCount - expectedKeywordMatches);
+  }
+  
+  // Ensure score stays within bounds
+  return Math.max(0, Math.min(100, Math.round(score)));
+};
+
+// Generate ATS feedback based on score
+export const getATSFeedback = (score, transcript) => {
+  const words = transcript ? transcript.toLowerCase().split(/\s+/) : [];
+  const wordCount = words.length;
+  
+  if (!transcript || transcript.trim() === '') {
+    return "No answer provided. Please provide a complete response to receive ATS feedback.";
+  }
+  
+  let feedback = "";
+  
+  // Core feedback based on score
+  if (score >= 85) {
+    feedback = "Excellent! Your response is highly ATS-compatible with strong use of relevant keywords and action verbs.";
+  } else if (score >= 70) {
+    feedback = "Good job! Your answer includes relevant keywords, but could benefit from more specific action verbs.";
+  } else if (score >= 50) {
+    feedback = "Fair. Try to include more job-related terms and focus on concrete achievements and skills.";
+  } else {
+    feedback = "Needs improvement. Your answer may have too many filler words or lack relevance to the question.";
+  }
+  
+  // Additional specific feedback
+  if (wordCount < 30) {
+    feedback += " Your answer is quite brief. Providing more detail would improve your ATS score.";
+  }
+  
+  if (wordCount > 300) {
+    feedback += " Your answer is comprehensive, but consider being more concise while maintaining key details.";
+  }
+  
+  return feedback;
+};
+
 // Helper function to generate a score based on answer content
 const generateSmartScore = (answer) => {
   if (!answer || answer.trim() === '') return 65;
@@ -128,11 +248,17 @@ export const generateResults = (answers, questions) => {
     const question = questions.find(q => q.id === questionId);
     const answer = answers[questionId];
     
-    // Generate more realistic score based on answer content
-    const score = generateSmartScore(answer);
+    // Generate interview score based on answer content
+    const interviewScore = generateSmartScore(answer);
     
-    // Generate more personalized feedback
-    const feedback = generateSmartFeedback(answer, score, question.type);
+    // Generate ATS score based on answer content
+    const atsScore = calculateATSScore(answer);
+    
+    // Generate personalized feedback
+    const feedback = generateSmartFeedback(answer, interviewScore, question.type);
+    
+    // Generate ATS feedback
+    const atsFeedback = getATSFeedback(atsScore, answer);
     
     // Generate ideal answer template
     const idealAnswer = generateIdealAnswer(question.text);
@@ -140,8 +266,10 @@ export const generateResults = (answers, questions) => {
     return {
       question: question.text,
       answer,
-      score,
+      score: interviewScore,
+      ats_score: atsScore,
       feedback,
+      ats_feedback: atsFeedback,
       idealAnswer,
       type: question.type
     };

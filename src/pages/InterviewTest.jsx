@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import StepManager from '../components/interview/StepManager';
 import useInterviewTimer from '../hooks/useInterviewTimer';
-import { getInterviewQuestions, calculateOverallScore } from '../utils/interviewUtils';
+import { getInterviewQuestions, calculateOverallScore, generateResults } from '../utils/interviewUtils';
 
 const InterviewTest = () => {
   const [step, setStep] = useState('intro'); // intro, preview, question, results
@@ -16,6 +16,7 @@ const InterviewTest = () => {
   const [answers, setAnswers] = useState({});
   const [currentAnswer, setCurrentAnswer] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [resultsData, setResultsData] = useState(null);
   const { user, isAuthenticated, loading } = useAuth();
   
   // Get the interview questions
@@ -73,6 +74,7 @@ const InterviewTest = () => {
     try {
       // Generate results based on answers
       const results = await saveAndGenerateResults();
+      setResultsData(results);
       
       // Simulate API processing time
       await new Promise(resolve => setTimeout(resolve, 1500));
@@ -88,26 +90,19 @@ const InterviewTest = () => {
 
   // Function to save results to Supabase and generate feedback
   async function saveAndGenerateResults() {
-    const results = Object.keys(answers).map(questionId => {
-      const question = questions.find(q => q.id === questionId);
-      // Generate score and feedback based on answer
-      const score = Math.floor(Math.random() * 30) + 70; // Placeholder scoring logic
-      return {
-        question: question.text,
-        answer: answers[questionId],
-        score,
-        feedback: `Your answer was ${score >= 80 ? 'strong' : 'good'}. ${score >= 80 ? 'Well articulated!' : 'Could use more specific examples.'}`,
-        idealAnswer: `An ideal answer would include specific examples and demonstrate your experience with ${question.type.toLowerCase()} situations.`
-      };
-    });
+    const results = generateResults(answers, questions);
+    
+    // Calculate overall scores
+    const overallInterviewScore = calculateOverallScore(results);
+    const overallATSScore = results.reduce((sum, item) => sum + (item.ats_score || 0), 0) / results.length;
 
     if (user) {
       try {
         // Save to Supabase
         const { error } = await supabase.from('test_results').insert({
           user_id: user.id,
-          ats_score: calculateOverallScore(results),
-          total_score: calculateOverallScore(results),
+          ats_score: Math.round(overallATSScore),
+          total_score: overallInterviewScore,
           feedback: JSON.stringify(results),
         });
         
@@ -121,6 +116,27 @@ const InterviewTest = () => {
           }));
         } else {
           toast.success('Test results saved successfully!');
+          
+          // Also save individual answers with ATS scores
+          const answerPromises = Object.keys(answers).map(async (questionId) => {
+            const question = questions.find(q => q.id === questionId);
+            const answer = answers[questionId];
+            const resultItem = results.find(r => r.question === question.text);
+            
+            return supabase.from('user_answers').insert({
+              user_id: user.id,
+              question: question.text,
+              transcript: answer,
+              ats_score: resultItem.ats_score || 0,
+              ats_feedback: resultItem.ats_feedback || ''
+            });
+          });
+          
+          try {
+            await Promise.all(answerPromises);
+          } catch (answerError) {
+            console.error('Error saving individual answers:', answerError);
+          }
         }
       } catch (dbError) {
         console.error('Database error:', dbError);
@@ -163,6 +179,7 @@ const InterviewTest = () => {
               currentAnswer={currentAnswer}
               onTranscriptUpdate={handleTranscriptUpdate}
               answers={answers}
+              results={resultsData}
             />
           )}
         </div>
