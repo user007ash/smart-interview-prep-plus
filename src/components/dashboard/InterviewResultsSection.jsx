@@ -2,13 +2,14 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { formatDate } from '@/utils/dashboardUtils';
-import { getATSFeedback } from '@/utils/interviewUtils';
+import { getATSFeedback, calculateATSScore } from '@/utils/interviewUtils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Info } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 const InterviewResultsSection = ({ results, loading }) => {
   const [showingFeedbackFor, setShowingFeedbackFor] = useState(null);
@@ -45,6 +46,29 @@ const InterviewResultsSection = ({ results, loading }) => {
       setShowingFeedbackFor(null);
     } else {
       setShowingFeedbackFor(resultId);
+    }
+  };
+
+  const getPersonalizedATSTips = (score) => {
+    if (score >= 80) {
+      return [
+        "Continue using strong industry-specific keywords",
+        "Maintain your excellent balance of action verbs",
+        "Your concise and clear communication style is effective"
+      ];
+    } else if (score >= 70) {
+      return [
+        "Incorporate more industry-specific keywords",
+        "Use more varied action verbs (e.g., implemented, developed, led)",
+        "Quantify your achievements with specific metrics"
+      ];
+    } else {
+      return [
+        "Reduce filler words like "um", "uh", and "like"",
+        "Make your answers more specific with concrete examples",
+        "Add relevant keywords from the job description",
+        "Structure your responses using the STAR method"
+      ];
     }
   };
 
@@ -151,31 +175,25 @@ const InterviewResultsSection = ({ results, loading }) => {
                             <Badge className={`${getATSBadgeColor(result.atsScore || result.ats_score || 0)} mr-2`}>
                               ATS Feedback
                             </Badge>
-                            <div>
-                              <p className="mb-2">{result.ats_feedback || getATSFeedback(result.atsScore || result.ats_score || 0, '')}</p>
+                            <div className="flex-1">
+                              <p className="mb-3">{result.ats_feedback || getATSFeedback(result.atsScore || result.ats_score || 0, '')}</p>
                               
-                              <div className="mt-3 text-sm">
-                                <h4 className="font-semibold mb-1">Personalized Tips:</h4>
-                                <ul className="list-disc pl-5 space-y-1">
-                                  {(result.atsScore || result.ats_score || 0) < 70 && (
-                                    <>
-                                      <li>Reduce filler words like "um", "uh", and "like"</li>
-                                      <li>Make your answers more specific with concrete examples</li>
-                                    </>
-                                  )}
-                                  {(result.atsScore || result.ats_score || 0) < 80 && (
-                                    <>
-                                      <li>Use more action verbs (e.g., led, developed, implemented)</li>
-                                      <li>Incorporate industry-specific keywords</li>
-                                    </>
-                                  )}
-                                  {(result.atsScore || result.ats_score || 0) >= 80 && (
-                                    <>
-                                      <li>Excellent use of keywords and action verbs</li>
-                                      <li>Keep maintaining this high standard in your answers</li>
-                                    </>
-                                  )}
+                              <div className="mt-3">
+                                <h4 className="font-semibold mb-2">Personalized Recommendations:</h4>
+                                <ul className="list-disc pl-5 space-y-1.5">
+                                  {getPersonalizedATSTips(result.atsScore || result.ats_score || 0).map((tip, i) => (
+                                    <li key={i} className="text-sm">{tip}</li>
+                                  ))}
                                 </ul>
+                              </div>
+                              
+                              <div className="mt-4 pt-4 border-t border-gray-200">
+                                <h4 className="font-semibold mb-2">How to improve your ATS score:</h4>
+                                <p className="text-sm">
+                                  {(result.atsScore || result.ats_score || 0) >= 80 
+                                    ? "Your answers are highly optimized for ATS systems. Continue using strong keywords and action verbs while maintaining your clear communication style."
+                                    : "Focus on incorporating relevant keywords from job descriptions, using strong action verbs, and quantifying your achievements with specific metrics."}
+                                </p>
                               </div>
                             </div>
                           </div>
