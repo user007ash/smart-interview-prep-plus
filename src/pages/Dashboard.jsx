@@ -1,12 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
-import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 import { Settings } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+
+// Import Dashboard Components
+import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
+import MetricsCard from '../components/dashboard/MetricsCard';
+import InterviewResultsSection from '../components/dashboard/InterviewResultsSection';
+import ResumeSection from '../components/dashboard/ResumeSection';
+import WelcomeSection from '../components/dashboard/WelcomeSection';
+import useDashboardData from '../hooks/useDashboardData';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -14,26 +22,25 @@ const Dashboard = () => {
     name: '',
     email: '',
     profileImage: null,
+    createdAt: null,
   });
-  const [testResults, setTestResults] = useState([]);
-  const [resumes, setResumes] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
   
   const { user, isAuthenticated, loading } = useAuth();
+  const { 
+    testResults,
+    resumes,
+    loading: dataLoading,
+    error,
+    metrics,
+    refreshData
+  } = useDashboardData(user?.id);
 
-  // Check if user is authenticated
-  if (!loading && !isAuthenticated) {
-    return <Navigate to="/login" />;
-  }
-  
-  // Load user data and test results
+  // Load user profile data
   useEffect(() => {
-    const loadUserData = async () => {
+    const fetchUserProfile = async () => {
       if (!user) return;
       
       try {
-        setIsLoading(true);
-        
         // Get user profile data
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
@@ -46,324 +53,106 @@ const Dashboard = () => {
           toast.error('Failed to load profile data');
         }
         
-        // Get test results
-        const { data: testResultsData, error: testResultsError } = await supabase
-          .from('test_results')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
-          
-        if (testResultsError) {
-          console.error('Error fetching test results:', testResultsError);
-          toast.error('Failed to load test history');
-        }
+        // Get user metadata for created_at date if available
+        const { data: authData, error: authError } = await supabase.auth.getUser();
         
-        // Check localStorage for recent results that might not be in the database yet
-        const localResults = localStorage.getItem('last_interview_results');
+        if (authError) {
+          console.error('Error fetching user data:', authError);
+        }
         
         // Process and set user data
         setUserData({
           name: profileData?.full_name || user.user_metadata?.full_name || 'User',
           email: user.email || '',
           profileImage: profileData?.avatar_url || null,
+          createdAt: authData?.user?.created_at || null,
         });
-        
-        // Process test results
-        const processedResults = (testResultsData || []).map(result => {
-          try {
-            // Parse feedback JSON if it exists
-            const feedback = result.feedback ? JSON.parse(result.feedback) : [];
-            return {
-              id: result.id,
-              date: new Date(result.created_at).toLocaleDateString(),
-              questions: feedback.length || 0,
-              score: result.total_score || 0,
-              type: getInterviewTypeFromFeedback(feedback) || 'General',
-              feedback
-            };
-          } catch (e) {
-            console.error('Error parsing result:', e);
-            return {
-              id: result.id,
-              date: new Date(result.created_at).toLocaleDateString(),
-              questions: 0,
-              score: result.total_score || 0,
-              type: 'General',
-              feedback: []
-            };
-          }
-        });
-        
-        setTestResults(processedResults);
-        
-        // Process resumes (mock data for now)
-        setResumes([
-          {
-            id: 1,
-            name: 'Software_Engineer_Resume.pdf',
-            uploadDate: '2023-05-15',
-            atsScore: 85,
-          },
-          {
-            id: 2,
-            name: 'Product_Manager_Resume.pdf',
-            uploadDate: '2023-06-02',
-            atsScore: 72,
-          }
-        ]);
       } catch (error) {
-        console.error('Dashboard data loading error:', error);
-        toast.error('Error loading dashboard data');
-      } finally {
-        setIsLoading(false);
+        console.error('Error loading user data:', error);
+        toast.error('Error loading user profile');
       }
     };
     
-    loadUserData();
+    if (user) {
+      fetchUserProfile();
+    }
   }, [user]);
+
+  // Check if user is authenticated
+  if (!loading && !isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
   
-  // Helper function to determine interview type from feedback
-  const getInterviewTypeFromFeedback = (feedback) => {
-    if (!feedback || feedback.length === 0) return 'General';
-    
-    // Count question types
-    const typeCounts = feedback.reduce((counts, item) => {
-      if (item.question && item.question.toLowerCase().includes('technical')) {
-        counts.technical = (counts.technical || 0) + 1;
-      } else if (item.question && item.question.toLowerCase().includes('behavior')) {
-        counts.behavioral = (counts.behavioral || 0) + 1;
-      } else {
-        counts.general = (counts.general || 0) + 1;
-      }
-      return counts;
-    }, {});
-    
-    // Determine dominant type
-    const max = Math.max(
-      typeCounts.technical || 0, 
-      typeCounts.behavioral || 0, 
-      typeCounts.general || 0
+  // Format member since date
+  const memberSince = userData.createdAt 
+    ? new Date(userData.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short' })
+    : 'N/A';
+  
+  // Render loading state
+  if (loading || dataLoading) {
+    return (
+      <>
+        <Navbar />
+        <div className="min-h-screen bg-gray-50 pt-20 pb-16 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-interview-purple"></div>
+        </div>
+        <Footer />
+      </>
     );
-    
-    if (max === typeCounts.technical) return 'Technical';
-    if (max === typeCounts.behavioral) return 'Behavioral';
-    return 'General';
-  };
+  }
   
-  // Calculate average score
-  const calculateAverageScore = () => {
-    if (testResults.length === 0) return 0;
-    const sum = testResults.reduce((total, result) => total + result.score, 0);
-    return Math.round(sum / testResults.length);
-  };
-  
-  // Render tab content based on active tab
+  // Render dashboard tabs content
   const renderTabContent = () => {
     switch (activeTab) {
       case 'overview':
         return (
-          <div>
+          <div className="animate-fade-in">
+            {/* Welcome Message for new users or users with no data */}
+            {(testResults.length === 0 || resumes.length === 0) && (
+              <WelcomeSection userName={userData.name.split(' ')[0]} />
+            )}
+            
+            {/* Dashboard Metrics */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-                <h3 className="text-gray-500 text-sm font-medium mb-2">Uploaded Resumes</h3>
-                <div className="flex items-end justify-between">
-                  <span className="text-3xl font-bold">{resumes.length}</span>
-                  <Link to="/resume-upload" className="text-interview-purple text-sm hover:underline">Upload New</Link>
-                </div>
-              </div>
+              <MetricsCard
+                title="Average Interview Score"
+                value={`${metrics.averageInterviewScore}%`}
+                loading={dataLoading}
+                trend={metrics.interviewScoreTrend}
+                tooltip="Your average score across all interview tests. This measures factors like content, clarity, and depth of your answers."
+              />
               
-              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-                <h3 className="text-gray-500 text-sm font-medium mb-2">Completed Interviews</h3>
-                <div className="flex items-end justify-between">
-                  <span className="text-3xl font-bold">{testResults.length}</span>
-                  <Link to="/interview-test" className="text-interview-purple text-sm hover:underline">Start New</Link>
-                </div>
-              </div>
+              <MetricsCard
+                title="Average ATS Score"
+                value={`${metrics.averageATSScore}%`}
+                loading={dataLoading}
+                trend={metrics.atsScoreTrend}
+                tooltip="Average score from Applicant Tracking System analysis, measuring how well your resume matches job descriptions."
+              />
               
-              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-                <h3 className="text-gray-500 text-sm font-medium mb-2">Average Score</h3>
-                <div className="flex items-end">
-                  <span className="text-3xl font-bold">{calculateAverageScore()}%</span>
-                </div>
-              </div>
+              <MetricsCard
+                title="Tests Completed"
+                value={metrics.testsCompleted}
+                loading={dataLoading}
+                subtitle={metrics.testsCompleted > 0 ? `${resumes.length} Resumes` : "No tests yet"}
+              />
             </div>
             
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <div>
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-semibold">Recent Resumes</h2>
-                  <Link to="/resume-upload" className="text-interview-purple text-sm hover:underline">View All</Link>
-                </div>
-                
-                <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Name
-                          </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Date
-                          </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            ATS Score
-                          </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Actions
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {resumes.length > 0 ? (
-                          resumes.map((resume) => (
-                            <tr key={resume.id}>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                {resume.name}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {resume.uploadDate}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="flex items-center">
-                                  <span className="text-sm text-gray-900 mr-2">{resume.atsScore}%</span>
-                                  <div className="w-16 bg-gray-200 rounded-full h-2">
-                                    <div
-                                      className={`h-2 rounded-full ${
-                                        resume.atsScore >= 80 ? 'bg-green-500' : 
-                                        resume.atsScore >= 70 ? 'bg-yellow-500' : 'bg-red-500'
-                                      }`}
-                                      style={{ width: `${resume.atsScore}%` }}
-                                    ></div>
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                <button className="text-interview-purple hover:underline">View</button>
-                              </td>
-                            </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td colSpan="4" className="px-6 py-4 text-center text-sm text-gray-500">
-                              No resumes uploaded yet. 
-                              <Link to="/resume-upload" className="text-interview-purple hover:underline ml-1">
-                                Upload your first resume
-                              </Link>
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
+            {/* Main Content Tabs */}
+            <Tabs defaultValue="interviews" className="w-full">
+              <TabsList className="mb-6">
+                <TabsTrigger value="interviews" className="px-6">Interview Results</TabsTrigger>
+                <TabsTrigger value="resumes" className="px-6">Resumes</TabsTrigger>
+              </TabsList>
               
-              <div>
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-semibold">Recent Interview Tests</h2>
-                  <Link to="/interview-history" className="text-interview-purple text-sm hover:underline">View All</Link>
-                </div>
-                
-                <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Date
-                          </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Questions
-                          </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Score
-                          </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Type
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {testResults.length > 0 ? (
-                          testResults.slice(0, 4).map((result) => (
-                            <tr key={result.id}>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                {result.date}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {result.questions}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="flex items-center">
-                                  <span className="text-sm text-gray-900 mr-2">{result.score}%</span>
-                                  <div className="w-16 bg-gray-200 rounded-full h-2">
-                                    <div
-                                      className={`h-2 rounded-full ${
-                                        result.score >= 80 ? 'bg-green-500' : 
-                                        result.score >= 70 ? 'bg-yellow-500' : 'bg-red-500'
-                                      }`}
-                                      style={{ width: `${result.score}%` }}
-                                    ></div>
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                <span className={`px-2 py-1 rounded-full text-xs ${
-                                  result.type === 'Technical' ? 'bg-blue-100 text-blue-800' : 
-                                  result.type === 'Behavioral' ? 'bg-green-100 text-green-800' : 'bg-purple-100 text-purple-800'
-                                }`}>
-                                  {result.type}
-                                </span>
-                              </td>
-                            </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td colSpan="4" className="px-6 py-4 text-center text-sm text-gray-500">
-                              No interview tests completed yet. 
-                              <Link to="/interview-test" className="text-interview-purple hover:underline ml-1">
-                                Take your first test
-                              </Link>
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="mt-8 bg-interview-softBg rounded-lg p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold">Suggested Next Steps</h2>
-                <button className="text-interview-purple text-sm hover:underline">Refresh</button>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-white p-4 rounded-lg border border-gray-200">
-                  <h3 className="font-semibold mb-2">Try a Live Interview</h3>
-                  <p className="text-gray-600 text-sm mb-3">Practice with our webcam-based interview simulation.</p>
-                  <Link to="/live-interview">
-                    <Button className="w-full bg-interview-purple hover:bg-interview-darkPurple">Start Now</Button>
-                  </Link>
-                </div>
-                <div className="bg-white p-4 rounded-lg border border-gray-200">
-                  <h3 className="font-semibold mb-2">Behavioral Questions</h3>
-                  <p className="text-gray-600 text-sm mb-3">Your technical skills are strong, but try practicing leadership questions.</p>
-                  <Link to="/interview-test">
-                    <Button className="w-full bg-interview-purple hover:bg-interview-darkPurple">Practice</Button>
-                  </Link>
-                </div>
-                <div className="bg-white p-4 rounded-lg border border-gray-200">
-                  <h3 className="font-semibold mb-2">Optimize Resume</h3>
-                  <p className="text-gray-600 text-sm mb-3">Your current ATS score could be improved with some adjustments.</p>
-                  <Link to="/resume-upload">
-                    <Button className="w-full bg-interview-purple hover:bg-interview-darkPurple">Upload New</Button>
-                  </Link>
-                </div>
-              </div>
-            </div>
+              <TabsContent value="interviews" className="animate-fade-in">
+                <InterviewResultsSection results={testResults} loading={dataLoading} />
+              </TabsContent>
+              
+              <TabsContent value="resumes" className="animate-fade-in">
+                <ResumeSection resumes={resumes} loading={dataLoading} />
+              </TabsContent>
+            </Tabs>
           </div>
         );
       
@@ -576,26 +365,15 @@ const Dashboard = () => {
     }
   };
   
-  if (loading || isLoading) {
-    return (
-      <>
-        <Navbar />
-        <div className="min-h-screen bg-gray-50 pt-20 pb-16 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-interview-purple"></div>
-        </div>
-        <Footer />
-      </>
-    );
-  }
-  
   return (
     <>
       <Navbar />
       <div className="min-h-screen bg-gray-50 pt-20 pb-16">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row gap-8">
+            {/* Sidebar */}
             <div className="w-full md:w-64 lg:w-72 shrink-0">
-              <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-6 sticky top-24">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-6 sticky top-24 transition-shadow duration-300 hover:shadow-md">
                 <div className="flex items-center space-x-3 mb-8">
                   <div className="w-12 h-12 bg-interview-softBg rounded-full flex items-center justify-center text-lg text-interview-purple font-semibold">
                     {userData.name.charAt(0)}
@@ -606,9 +384,19 @@ const Dashboard = () => {
                   </div>
                 </div>
                 
+                <div className="mb-6 pb-6 border-b border-gray-200">
+                  <div className="text-sm text-gray-500 mb-1">Account Type</div>
+                  <div className="font-medium">User</div>
+                </div>
+                
+                <div className="mb-6 pb-6 border-b border-gray-200">
+                  <div className="text-sm text-gray-500 mb-1">Member Since</div>
+                  <div className="font-medium">{memberSince}</div>
+                </div>
+                
                 <nav className="space-y-1">
                   <button
-                    className={`w-full flex items-center space-x-3 px-3 py-2 rounded-md text-left ${
+                    className={`w-full flex items-center space-x-3 px-3 py-2 rounded-md text-left transition-colors ${
                       activeTab === 'overview'
                         ? 'bg-interview-softBg text-interview-purple font-medium'
                         : 'text-gray-600 hover:bg-gray-50'
@@ -622,7 +410,7 @@ const Dashboard = () => {
                   </button>
                   
                   <button
-                    className={`w-full flex items-center space-x-3 px-3 py-2 rounded-md text-left ${
+                    className={`w-full flex items-center space-x-3 px-3 py-2 rounded-md text-left transition-colors ${
                       activeTab === 'profile'
                         ? 'bg-interview-softBg text-interview-purple font-medium'
                         : 'text-gray-600 hover:bg-gray-50'
@@ -636,7 +424,7 @@ const Dashboard = () => {
                   </button>
                   
                   <button
-                    className={`w-full flex items-center space-x-3 px-3 py-2 rounded-md text-left ${
+                    className={`w-full flex items-center space-x-3 px-3 py-2 rounded-md text-left transition-colors ${
                       activeTab === 'settings'
                         ? 'bg-interview-softBg text-interview-purple font-medium'
                         : 'text-gray-600 hover:bg-gray-50'
@@ -647,10 +435,35 @@ const Dashboard = () => {
                     <span>Settings</span>
                   </button>
                 </nav>
+                
+                <div className="mt-8">
+                  <Button 
+                    onClick={refreshData} 
+                    variant="outline" 
+                    className="w-full border-interview-purple text-interview-purple hover:bg-interview-softBg"
+                  >
+                    Refresh Data
+                  </Button>
+                </div>
               </div>
             </div>
             
+            {/* Main Content */}
             <div className="flex-1">
+              {error && (
+                <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-md mb-6">
+                  <h3 className="font-medium">Error Loading Data</h3>
+                  <p>{error}</p>
+                  <Button 
+                    onClick={refreshData} 
+                    variant="outline" 
+                    size="sm" 
+                    className="mt-2 border-red-200 text-red-700 hover:bg-red-100"
+                  >
+                    Retry
+                  </Button>
+                </div>
+              )}
               {renderTabContent()}
             </div>
           </div>
