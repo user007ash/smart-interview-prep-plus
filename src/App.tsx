@@ -10,22 +10,25 @@ import InterviewResult from './pages/InterviewResult';
 import ResumeUpload from './pages/ResumeUpload';
 import LiveInterview from './pages/LiveInterview';
 import { Toaster } from "sonner";
+import { AuthProvider } from './contexts/AuthContext';
 
 function App() {
   return (
     <Router>
-      <Routes>
-        <Route path="/" element={<Index />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/about" element={<AboutUs />} />
-        <Route path="/interview-test" element={<InterviewTest />} />
-        <Route path="/interview-result/:id" element={<InterviewResult />} />
-        <Route path="/resume-upload" element={<ResumeUpload />} />
-        <Route path="/live-interview" element={<LiveInterview />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-      <Toaster position="top-right" closeButton />
+      <AuthProvider>
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/about" element={<AboutUs />} />
+          <Route path="/interview-test" element={<InterviewTest />} />
+          <Route path="/interview-result/:id" element={<InterviewResult />} />
+          <Route path="/resume-upload" element={<ResumeUpload />} />
+          <Route path="/live-interview" element={<LiveInterview />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+        <Toaster position="top-right" closeButton />
+      </AuthProvider>
     </Router>
   );
 }
