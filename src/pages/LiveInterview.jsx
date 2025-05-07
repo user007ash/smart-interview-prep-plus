@@ -1,26 +1,13 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import useLiveInterview from '../hooks/useLiveInterview';
+import LiveInterviewControls from '../components/interview/LiveInterviewControls';
 
 const LiveInterview = () => {
-  const [isStarted, setIsStarted] = useState(false);
-  const [isPermissionGranted, setIsPermissionGranted] = useState(false);
-  const [isCheckingPermissions, setIsCheckingPermissions] = useState(false);
-  const [activeCamera, setActiveCamera] = useState(true);
-  const [activeMic, setActiveMic] = useState(true);
-  const [currentQuestion, setCurrentQuestion] = useState(null);
-  const [transcript, setTranscript] = useState('');
-  const [interviewEnded, setInterviewEnded] = useState(false);
-  const [questionIndex, setQuestionIndex] = useState(0);
-  
-  const videoRef = useRef(null);
-  const mediaStreamRef = useRef(null);
-  const recognitionRef = useRef(null);
-  
-  // Mock questions
+  // Mock questions - we'll keep these as-is for now
   const questions = [
     "Tell me about yourself and your experience with web development.",
     "What is your greatest strength as a developer?",
@@ -29,140 +16,26 @@ const LiveInterview = () => {
     "Where do you see yourself professionally in 5 years?"
   ];
   
-  const checkPermissions = async () => {
-    setIsCheckingPermissions(true);
-    
-    try {
-      await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      setIsPermissionGranted(true);
-    } catch (error) {
-      console.error('Permission error:', error);
-      toast.error('Camera and microphone permissions are required for the live interview');
-      setIsPermissionGranted(false);
-    } finally {
-      setIsCheckingPermissions(false);
-    }
-  };
-  
-  const startInterview = async () => {
-    try {
-      if (!isPermissionGranted) {
-        await checkPermissions();
-        if (!isPermissionGranted) return;
-      }
-      
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      mediaStreamRef.current = stream;
-      
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-      
-      // Start speech recognition if supported
-      if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        recognitionRef.current = new SpeechRecognition();
-        recognitionRef.current.continuous = true;
-        recognitionRef.current.interimResults = true;
-        
-        recognitionRef.current.onresult = (event) => {
-          let interimTranscript = '';
-          let finalTranscript = '';
-          
-          for (let i = event.resultIndex; i < event.results.length; ++i) {
-            if (event.results[i].isFinal) {
-              finalTranscript += event.results[i][0].transcript;
-            } else {
-              interimTranscript += event.results[i][0].transcript;
-            }
-          }
-          
-          setTranscript(finalTranscript || interimTranscript);
-        };
-        
-        recognitionRef.current.start();
-      } else {
-        toast.error('Speech recognition is not supported in your browser');
-      }
-      
-      setCurrentQuestion(questions[0]);
-      setIsStarted(true);
-    } catch (error) {
-      console.error('Start interview error:', error);
-      toast.error('Error starting interview. Please try again.');
-    }
-  };
-  
-  const stopInterview = () => {
-    if (mediaStreamRef.current) {
-      mediaStreamRef.current.getTracks().forEach(track => track.stop());
-    }
-    
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-    }
-    
-    setInterviewEnded(true);
-    setIsStarted(false);
-  };
-  
-  const toggleCamera = () => {
-    if (mediaStreamRef.current) {
-      mediaStreamRef.current.getVideoTracks().forEach(track => {
-        track.enabled = !activeCamera;
-      });
-      setActiveCamera(!activeCamera);
-    }
-  };
-  
-  const toggleMicrophone = () => {
-    if (mediaStreamRef.current) {
-      mediaStreamRef.current.getAudioTracks().forEach(track => {
-        track.enabled = !activeMic;
-      });
-      setActiveMic(!activeMic);
-      
-      if (!activeMic) {
-        // Restart recognition if mic was turned off
-        if (recognitionRef.current) {
-          recognitionRef.current.start();
-        }
-      } else {
-        // Stop recognition if mic is turned off
-        if (recognitionRef.current) {
-          recognitionRef.current.stop();
-        }
-      }
-    }
-  };
-  
-  const nextQuestion = () => {
-    // Save current answer (in a real app, you'd send this to your backend)
-    console.log(`Answer to question ${questionIndex + 1}:`, transcript);
-    
-    // Clear transcript
-    setTranscript('');
-    
-    // Move to next question or end interview
-    if (questionIndex < questions.length - 1) {
-      setQuestionIndex(prevIndex => prevIndex + 1);
-      setCurrentQuestion(questions[questionIndex + 1]);
-    } else {
-      stopInterview();
-    }
-  };
-  
-  // Clean up on unmount
-  useEffect(() => {
-    return () => {
-      if (mediaStreamRef.current) {
-        mediaStreamRef.current.getTracks().forEach(track => track.stop());
-      }
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
-    };
-  }, []);
+  // Use the custom hook for managing interview state and functions
+  const {
+    isStarted,
+    isPermissionGranted,
+    isCheckingPermissions,
+    activeCamera,
+    activeMic,
+    currentQuestion,
+    transcript,
+    interviewEnded,
+    questionIndex,
+    videoRef,
+    checkPermissions,
+    startInterview,
+    stopInterview,
+    toggleCamera,
+    toggleMicrophone,
+    nextQuestion,
+    resetInterview
+  } = useLiveInterview(questions);
   
   const renderContent = () => {
     if (interviewEnded) {
@@ -219,11 +92,7 @@ const LiveInterview = () => {
             <Button 
               variant="outline" 
               className="border-interview-purple text-interview-purple hover:bg-interview-softBg"
-              onClick={() => {
-                setInterviewEnded(false);
-                setQuestionIndex(0);
-                setTranscript('');
-              }}
+              onClick={resetInterview}
             >
               Start New Interview
             </Button>
@@ -370,41 +239,13 @@ const LiveInterview = () => {
                 </div>
               )}
               
-              <div className="absolute bottom-4 right-4 flex space-x-2">
-                <button 
-                  className={`p-2 rounded-full ${
-                    activeCamera ? 'bg-interview-purple text-white' : 'bg-gray-600 text-white'
-                  }`}
-                  onClick={toggleCamera}
-                >
-                  {activeCamera ? (
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                  ) : (
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                    </svg>
-                  )}
-                </button>
-                
-                <button 
-                  className={`p-2 rounded-full ${
-                    activeMic ? 'bg-interview-purple text-white' : 'bg-gray-600 text-white'
-                  }`}
-                  onClick={toggleMicrophone}
-                >
-                  {activeMic ? (
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                    </svg>
-                  ) : (
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                    </svg>
-                  )}
-                </button>
-              </div>
+              {/* Use our new LiveInterviewControls component */}
+              <LiveInterviewControls
+                activeCamera={activeCamera}
+                activeMic={activeMic}
+                toggleCamera={toggleCamera}
+                toggleMicrophone={toggleMicrophone}
+              />
             </div>
             
             {/* Current question */}
