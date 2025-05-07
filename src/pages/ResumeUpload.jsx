@@ -1,32 +1,80 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { validateResumeFile, analyzeResume } from '@/utils/resumeUtils';
+
+// Component states
+const STATES = {
+  INITIAL: 'initial',
+  UPLOADING: 'uploading',
+  ANALYZING: 'analyzing',
+  COMPLETED: 'completed'
+};
 
 const ResumeUpload = () => {
+  const { user } = useAuth();
   const [selectedFile, setSelectedFile] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [currentState, setCurrentState] = useState(STATES.INITIAL);
   const [analysis, setAnalysis] = useState(null);
+  const [analysisProgress, setAnalysisProgress] = useState({
+    parsing: 0,
+    extractingSkills: 0,
+    analyzingATS: 0,
+    generatingQuestions: 0
+  });
   
+  // Effect to simulate progress during analysis
+  useEffect(() => {
+    let interval;
+    
+    if (currentState === STATES.ANALYZING) {
+      interval = setInterval(() => {
+        setAnalysisProgress(prev => {
+          const newProgress = { ...prev };
+          
+          if (newProgress.parsing < 100) {
+            newProgress.parsing = Math.min(100, newProgress.parsing + 10);
+          } else if (newProgress.extractingSkills < 100) {
+            newProgress.extractingSkills = Math.min(100, newProgress.extractingSkills + 5);
+          } else if (newProgress.analyzingATS < 100) {
+            newProgress.analyzingATS = Math.min(100, newProgress.analyzingATS + 3);
+          } else if (newProgress.generatingQuestions < 100) {
+            newProgress.generatingQuestions = Math.min(100, newProgress.generatingQuestions + 2);
+          } else {
+            clearInterval(interval);
+          }
+          
+          return newProgress;
+        });
+      }, 100);
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [currentState]);
+  
+  // Handle file input change
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     handleFile(file);
   };
   
+  // Process selected file
   const handleFile = (file) => {
-    // Check if file is PDF
-    if (file && file.type === 'application/pdf') {
+    if (validateResumeFile(file)) {
       setSelectedFile(file);
-    } else {
-      toast.error('Please upload a PDF file');
     }
   };
   
+  // Drag and drop handlers
   const handleDragEnter = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -53,51 +101,70 @@ const ResumeUpload = () => {
     handleFile(file);
   };
   
+  // Upload and analyze resume
   const handleUpload = async () => {
     if (!selectedFile) {
       toast.error('Please select a file to upload');
       return;
     }
     
-    setIsUploading(true);
+    if (!user) {
+      toast.error('You must be logged in to upload a resume');
+      return;
+    }
     
     try {
-      // Simulate file upload API call
+      // Start upload process
+      setCurrentState(STATES.UPLOADING);
+      
+      // Simulate file upload API call (replace with actual Supabase upload)
       await new Promise(resolve => setTimeout(resolve, 1500));
       
+      // Check file type once more
+      if (!validateResumeFile(selectedFile)) {
+        setCurrentState(STATES.INITIAL);
+        return;
+      }
+      
       toast.success('Resume uploaded successfully');
-      setIsUploading(false);
-      setIsAnalyzing(true);
+      resetAnalysisProgress();
+      setCurrentState(STATES.ANALYZING);
       
       // Simulate resume analysis API call
-      await new Promise(resolve => setTimeout(resolve, 2500));
+      const analysisResult = await analyzeResume(selectedFile);
       
-      // Mock analysis response
-      const mockAnalysis = {
-        atsScore: 75,
-        keywords: ['JavaScript', 'React', 'Node.js', 'MongoDB', 'Full Stack', 'API Development'],
-        missingKeywords: ['TypeScript', 'AWS', 'Docker', 'CI/CD'],
-        summary: 'Your resume shows strong experience in full-stack development with JavaScript technologies. Consider highlighting more specific achievements and metrics.',
-        interviewQuestions: [
-          'Describe a challenging project where you used React and how you solved the main problems.',
-          'How do you approach optimizing database queries in MongoDB?',
-          'Can you explain your experience with RESTful API design and implementation?',
-          'Tell me about a time when you had to refactor code to improve performance.',
-          'How do you stay updated with the latest JavaScript ecosystem developments?',
-          'Describe your experience working with version control systems like Git.',
-          'How would you handle authentication and authorization in a Node.js application?',
-          'What strategies do you use to ensure your code is maintainable and scalable?',
-        ]
-      };
+      // Update analysis state
+      setAnalysis(analysisResult);
+      setCurrentState(STATES.COMPLETED);
       
-      setAnalysis(mockAnalysis);
-      setIsAnalyzing(false);
+      // Store result in Supabase if needed
+      if (user) {
+        try {
+          await supabase.from('test_results').insert({
+            user_id: user.id,
+            ats_score: analysisResult.atsScore,
+            feedback: JSON.stringify(analysisResult)
+          });
+        } catch (error) {
+          console.error('Error saving analysis result:', error);
+          // Don't show an error toast here as analysis was successful
+        }
+      }
     } catch (error) {
       console.error('Upload error:', error);
-      toast.error('Error uploading resume');
-      setIsUploading(false);
-      setIsAnalyzing(false);
+      toast.error('Error analyzing resume. Please try again.');
+      setCurrentState(STATES.INITIAL);
     }
+  };
+  
+  // Reset analysis progress indicators
+  const resetAnalysisProgress = () => {
+    setAnalysisProgress({
+      parsing: 0,
+      extractingSkills: 0,
+      analyzingATS: 0,
+      generatingQuestions: 0
+    });
   };
   
   return (
@@ -112,7 +179,7 @@ const ResumeUpload = () => {
             </p>
           </div>
           
-          {!analysis ? (
+          {currentState !== STATES.COMPLETED ? (
             <div className="bg-white p-8 rounded-lg shadow-sm border border-gray-100">
               <div 
                 className={`border-2 border-dashed rounded-lg p-8 text-center ${
@@ -150,10 +217,10 @@ const ResumeUpload = () => {
                     </div>
                     <Button 
                       className="bg-interview-purple hover:bg-interview-darkPurple"
-                      disabled={isUploading}
+                      disabled={currentState !== STATES.INITIAL}
                       onClick={handleUpload}
                     >
-                      {isUploading ? (
+                      {currentState === STATES.UPLOADING ? (
                         <div className="flex items-center">
                           <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -173,18 +240,18 @@ const ResumeUpload = () => {
                       <input 
                         type="file" 
                         className="hidden" 
-                        accept=".pdf" 
+                        accept=".pdf,.docx" 
                         onChange={handleFileChange}
                       />
                     </label>
                     <p className="text-sm text-gray-500 mt-4">
-                      Supported format: PDF (Max size: 5MB)
+                      Supported formats: PDF, DOCX (Max size: 5MB)
                     </p>
                   </div>
                 )}
               </div>
               
-              {isAnalyzing && (
+              {currentState === STATES.ANALYZING && (
                 <div className="mt-8 text-center">
                   <div className="inline-flex items-center px-4 py-2 bg-interview-softBg text-interview-purple rounded-full">
                     <svg className="animate-spin -ml-1 mr-3 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -197,37 +264,37 @@ const ResumeUpload = () => {
                     <div className="mb-4">
                       <div className="flex justify-between mb-1">
                         <span className="text-sm font-medium">Parsing Resume</span>
-                        <span className="text-sm font-medium">100%</span>
+                        <span className="text-sm font-medium">{analysisProgress.parsing}%</span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div className="bg-interview-purple h-2 rounded-full" style={{ width: '100%' }}></div>
+                        <div className="bg-interview-purple h-2 rounded-full" style={{ width: `${analysisProgress.parsing}%` }}></div>
                       </div>
                     </div>
                     <div className="mb-4">
                       <div className="flex justify-between mb-1">
                         <span className="text-sm font-medium">Extracting Skills</span>
-                        <span className="text-sm font-medium">85%</span>
+                        <span className="text-sm font-medium">{analysisProgress.extractingSkills}%</span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div className="bg-interview-purple h-2 rounded-full" style={{ width: '85%' }}></div>
+                        <div className="bg-interview-purple h-2 rounded-full" style={{ width: `${analysisProgress.extractingSkills}%` }}></div>
                       </div>
                     </div>
                     <div className="mb-4">
                       <div className="flex justify-between mb-1">
                         <span className="text-sm font-medium">Analyzing ATS Score</span>
-                        <span className="text-sm font-medium">60%</span>
+                        <span className="text-sm font-medium">{analysisProgress.analyzingATS}%</span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div className="bg-interview-purple h-2 rounded-full" style={{ width: '60%' }}></div>
+                        <div className="bg-interview-purple h-2 rounded-full" style={{ width: `${analysisProgress.analyzingATS}%` }}></div>
                       </div>
                     </div>
                     <div>
                       <div className="flex justify-between mb-1">
                         <span className="text-sm font-medium">Generating Questions</span>
-                        <span className="text-sm font-medium">25%</span>
+                        <span className="text-sm font-medium">{analysisProgress.generatingQuestions}%</span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div className="bg-interview-purple h-2 rounded-full" style={{ width: '25%' }}></div>
+                        <div className="bg-interview-purple h-2 rounded-full" style={{ width: `${analysisProgress.generatingQuestions}%` }}></div>
                       </div>
                     </div>
                   </div>
@@ -244,7 +311,7 @@ const ResumeUpload = () => {
                       <p className="text-gray-600">Based on your uploaded resume: {selectedFile?.name}</p>
                     </div>
                     <div className="mt-4 md:mt-0">
-                      <Button variant="outline" onClick={() => setAnalysis(null)} className="border-interview-purple text-interview-purple hover:bg-interview-softBg">
+                      <Button variant="outline" onClick={() => setCurrentState(STATES.INITIAL)} className="border-interview-purple text-interview-purple hover:bg-interview-softBg">
                         Upload Another
                       </Button>
                     </div>
@@ -253,15 +320,15 @@ const ResumeUpload = () => {
                   <div className="mb-8">
                     <div className="flex items-center justify-between mb-2">
                       <h3 className="font-semibold text-lg">ATS Score</h3>
-                      <span className="text-lg font-bold">{analysis.atsScore}%</span>
+                      <span className="text-lg font-bold">{analysis?.atsScore}%</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2.5">
                       <div 
                         className={`h-2.5 rounded-full ${
-                          analysis.atsScore >= 80 ? 'bg-green-500' : 
-                          analysis.atsScore >= 70 ? 'bg-yellow-500' : 'bg-red-500'
+                          analysis?.atsScore >= 80 ? 'bg-green-500' : 
+                          analysis?.atsScore >= 70 ? 'bg-yellow-500' : 'bg-red-500'
                         }`}
-                        style={{ width: `${analysis.atsScore}%` }}
+                        style={{ width: `${analysis?.atsScore}%` }}
                       ></div>
                     </div>
                     <div className="flex justify-between mt-1">
@@ -273,7 +340,7 @@ const ResumeUpload = () => {
                   <div className="mb-8">
                     <h3 className="font-semibold text-lg mb-4">Keywords Found</h3>
                     <div className="flex flex-wrap gap-2">
-                      {analysis.keywords.map((keyword, index) => (
+                      {analysis?.keywords.map((keyword, index) => (
                         <span key={index} className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">
                           {keyword}
                         </span>
@@ -284,7 +351,7 @@ const ResumeUpload = () => {
                   <div className="mb-8">
                     <h3 className="font-semibold text-lg mb-4">Keywords Missing</h3>
                     <div className="flex flex-wrap gap-2">
-                      {analysis.missingKeywords.map((keyword, index) => (
+                      {analysis?.missingKeywords.map((keyword, index) => (
                         <span key={index} className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm">
                           {keyword}
                         </span>
@@ -295,7 +362,7 @@ const ResumeUpload = () => {
                   <div className="mb-8">
                     <h3 className="font-semibold text-lg mb-4">Summary</h3>
                     <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg text-blue-800">
-                      {analysis.summary}
+                      {analysis?.summary}
                     </div>
                   </div>
                   
@@ -303,12 +370,12 @@ const ResumeUpload = () => {
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="font-semibold text-lg">Generated Interview Questions</h3>
                       <span className="bg-interview-softBg text-interview-purple px-2 py-1 rounded text-sm">
-                        {analysis.interviewQuestions.length} Questions
+                        {analysis?.interviewQuestions.length} Questions
                       </span>
                     </div>
                     
                     <div className="space-y-4">
-                      {analysis.interviewQuestions.map((question, index) => (
+                      {analysis?.interviewQuestions.map((question, index) => (
                         <div key={index} className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
                           <h4 className="font-medium mb-1">Question {index + 1}</h4>
                           <p className="text-gray-700">{question}</p>

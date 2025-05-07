@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import RecordingControls from './audio/RecordingControls';
@@ -8,6 +8,9 @@ import AudioPreview from './audio/AudioPreview';
 import useSpeechRecognition from '../hooks/useSpeechRecognition';
 import useAudioRecorder from '../hooks/useAudioRecorder';
 
+/**
+ * Component for speech-to-text functionality with audio recording
+ */
 const SpeechToText = ({ onTranscriptUpdate, currentQuestion }) => {
   const [isUploading, setIsUploading] = useState(false);
   
@@ -15,7 +18,9 @@ const SpeechToText = ({ onTranscriptUpdate, currentQuestion }) => {
   const speech = useSpeechRecognition(onTranscriptUpdate);
   const audio = useAudioRecorder();
   
-  // Toggle recording state
+  /**
+   * Toggle recording state
+   */
   const toggleRecording = async () => {
     if (!speech.isSupported) {
       toast.error('Speech recognition is not supported by your browser.');
@@ -44,7 +49,9 @@ const SpeechToText = ({ onTranscriptUpdate, currentQuestion }) => {
     }
   };
 
-  // Upload audio recording to Supabase
+  /**
+   * Upload audio recording to Supabase
+   */
   const uploadRecording = async () => {
     if (!audio.audioBlob || !currentQuestion) {
       toast.error('No recording to upload or question is missing.');
@@ -54,17 +61,20 @@ const SpeechToText = ({ onTranscriptUpdate, currentQuestion }) => {
     setIsUploading(true);
 
     try {
+      // Create form data for upload
       const formData = new FormData();
       formData.append('audio', audio.audioBlob, 'recording.webm');
       formData.append('question', currentQuestion);
       formData.append('transcript', speech.transcript);
 
+      // Get user session
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
         throw new Error('No session found. Please log in.');
       }
 
+      // Call Supabase Edge Function for audio upload
       const response = await fetch(`https://lousxuhyqvxkmyjhzqcj.supabase.co/functions/v1/audio-upload`, {
         method: 'POST',
         headers: {
