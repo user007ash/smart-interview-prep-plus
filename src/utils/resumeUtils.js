@@ -406,15 +406,15 @@ export const uploadResumeToSupabase = async (file, userId) => {
     // Analyze resume content for ATS compatibility
     // Detect job type from file name or content
     let jobType = 'general';
-    const fileName = file.name.toLowerCase();
+    const lowerCaseFileName = file.name.toLowerCase();
     
-    if (fileName.includes('engineer') || fileName.includes('developer') || resumeContent.toLowerCase().includes('software')) {
+    if (lowerCaseFileName.includes('engineer') || lowerCaseFileName.includes('developer') || resumeContent.toLowerCase().includes('software')) {
       jobType = 'softwareEngineering';
-    } else if (fileName.includes('product') || resumeContent.toLowerCase().includes('product manager')) {
+    } else if (lowerCaseFileName.includes('product') || resumeContent.toLowerCase().includes('product manager')) {
       jobType = 'productManagement';
-    } else if (fileName.includes('data') || resumeContent.toLowerCase().includes('data scientist')) {
+    } else if (lowerCaseFileName.includes('data') || resumeContent.toLowerCase().includes('data scientist')) {
       jobType = 'dataScience';
-    } else if (fileName.includes('market') || resumeContent.toLowerCase().includes('marketing')) {
+    } else if (lowerCaseFileName.includes('market') || resumeContent.toLowerCase().includes('marketing')) {
       jobType = 'marketing';
     }
     
