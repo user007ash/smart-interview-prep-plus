@@ -5,8 +5,30 @@ import { formatDate } from '@/utils/dashboardUtils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Info } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 const ResumeSection = ({ resumes, loading }) => {
+  const [expandedResumeId, setExpandedResumeId] = React.useState(null);
+
+  const toggleExpand = (resumeId) => {
+    setExpandedResumeId(expandedResumeId === resumeId ? null : resumeId);
+  };
+
+  const getScoreColor = (score) => {
+    if (score >= 80) return 'bg-green-500';
+    if (score >= 70) return 'bg-yellow-500';
+    return 'bg-red-500';
+  };
+
+  const getScoreBadgeClass = (score) => {
+    if (score >= 80) return 'bg-green-100 text-green-800';
+    if (score >= 70) return 'bg-yellow-100 text-yellow-800';
+    return 'bg-red-100 text-red-800';
+  };
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -25,7 +47,21 @@ const ResumeSection = ({ resumes, loading }) => {
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold">Your Resumes</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-xl font-semibold">Your Resumes</h2>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button className="text-gray-400 hover:text-gray-600">
+                  <Info className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs">
+                <p>Upload your resume to see how well it would perform with Applicant Tracking Systems (ATS) used by employers.</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
         <Link to="/resume-upload" className="text-interview-purple text-sm hover:underline">Upload New</Link>
       </div>
       
@@ -36,35 +72,155 @@ const ResumeSection = ({ resumes, loading }) => {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Upload Date</TableHead>
-                <TableHead>ATS Score</TableHead>
+                <TableHead>
+                  <div className="flex items-center gap-1">
+                    ATS Score
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button className="text-gray-400 hover:text-gray-600">
+                            <Info className="h-4 w-4" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          <p>ATS Score measures how well your resume would perform with Applicant Tracking Systems used by employers.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                </TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {resumes.map((resume) => (
-                <TableRow key={resume.id} className="hover:bg-gray-50 transition-colors">
-                  <TableCell className="font-medium">{resume.name}</TableCell>
-                  <TableCell>{formatDate(resume.uploadDate || resume.uploaded_at)}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center">
-                      <span className="text-sm mr-2">{resume.atsScore || resume.ats_score || 0}%</span>
-                      <div className="w-16 bg-gray-200 rounded-full h-2">
-                        <div
-                          className={`h-2 rounded-full ${
-                            (resume.atsScore || resume.ats_score || 0) >= 80 ? 'bg-green-500' : 
-                            (resume.atsScore || resume.ats_score || 0) >= 70 ? 'bg-yellow-500' : 'bg-red-500'
-                          }`}
-                          style={{ width: `${resume.atsScore || resume.ats_score || 0}%` }}
-                        ></div>
+                <React.Fragment key={resume.id}>
+                  <TableRow className="hover:bg-gray-50 transition-colors">
+                    <TableCell className="font-medium">{resume.name || resume.file_name}</TableCell>
+                    <TableCell>{formatDate(resume.uploadDate || resume.uploaded_at || resume.created_at)}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center">
+                        <span className="text-sm mr-2">{resume.atsScore || resume.ats_score || 0}%</span>
+                        <div className="w-16 bg-gray-200 rounded-full h-2">
+                          <div
+                            className={`h-2 rounded-full ${getScoreColor(resume.atsScore || resume.ats_score || 0)}`}
+                            style={{ width: `${resume.atsScore || resume.ats_score || 0}%` }}
+                          ></div>
+                        </div>
+                        <button 
+                          onClick={() => toggleExpand(resume.id)}
+                          className="ml-2 text-gray-400 hover:text-interview-purple transition-colors"
+                        >
+                          <Info className="h-4 w-4" />
+                        </button>
                       </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Button variant="ghost" size="sm" className="text-interview-purple hover:text-interview-darkPurple hover:bg-interview-softBg">
-                      View
-                    </Button>
-                  </TableCell>
-                </TableRow>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button variant="ghost" size="sm" className="text-interview-purple hover:text-interview-darkPurple hover:bg-interview-softBg" onClick={() => toggleExpand(resume.id)}>
+                          {expandedResumeId === resume.id ? 'Hide Details' : 'View Details'}
+                        </Button>
+                        <Link to={`/resume/${resume.id}`}>
+                          <Button variant="outline" size="sm" className="border-interview-purple text-interview-purple hover:bg-interview-softBg">
+                            View
+                          </Button>
+                        </Link>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                  
+                  {expandedResumeId === resume.id && (
+                    <TableRow>
+                      <TableCell colSpan={4} className="p-0">
+                        <div className="p-4 bg-gray-50 border-t border-gray-100">
+                          <div className="flex flex-col gap-4">
+                            <div>
+                              <h3 className="font-semibold mb-2 flex items-center gap-2">
+                                ATS Feedback
+                                <Badge className={getScoreBadgeClass(resume.atsScore || resume.ats_score || 0)}>
+                                  {resume.atsScore || resume.ats_score || 0}%
+                                </Badge>
+                              </h3>
+                              
+                              {resume.ats_feedback ? (
+                                <p className="text-gray-700">
+                                  {typeof resume.ats_feedback === 'string' 
+                                    ? JSON.parse(resume.ats_feedback).message 
+                                    : resume.ats_feedback.message || "Your resume has been analyzed for ATS compatibility."}
+                                </p>
+                              ) : (
+                                <p className="text-gray-700">
+                                  {resume.atsScore || resume.ats_score >= 85
+                                    ? "Your resume is well-optimized for ATS systems. Great use of relevant keywords and formatting."
+                                    : resume.atsScore || resume.ats_score >= 60
+                                    ? "Good resume, but you could add more role-specific keywords and achievements to improve ATS compatibility."
+                                    : "Your resume needs significant improvement for ATS compatibility. Focus on formatting, keywords, and structure."}
+                                </p>
+                              )}
+                            </div>
+                            
+                            <div>
+                              <h4 className="font-medium mb-2">Recommendations:</h4>
+                              <ul className="list-disc pl-5 space-y-1">
+                                {resume.ats_feedback && typeof resume.ats_feedback === 'string' ? (
+                                  JSON.parse(resume.ats_feedback).improvements?.map((improvement, i) => (
+                                    <li key={i} className="text-sm text-gray-700">{improvement}</li>
+                                  ))
+                                ) : resume.improvements ? (
+                                  resume.improvements.map((improvement, i) => (
+                                    <li key={i} className="text-sm text-gray-700">{improvement}</li>
+                                  ))
+                                ) : (
+                                  <>
+                                    <li className="text-sm text-gray-700">Add more industry-specific keywords</li>
+                                    <li className="text-sm text-gray-700">Use action verbs to describe your achievements</li>
+                                    <li className="text-sm text-gray-700">Ensure consistent formatting throughout</li>
+                                  </>
+                                )}
+                              </ul>
+                            </div>
+                            
+                            <div className="flex flex-wrap gap-2">
+                              <div>
+                                <h4 className="font-medium mb-2">Keywords Found:</h4>
+                                <div className="flex flex-wrap gap-1">
+                                  {(resume.keywords_found && typeof resume.keywords_found === 'string' 
+                                    ? JSON.parse(resume.keywords_found) 
+                                    : resume.keywords || []).slice(0, 8).map((keyword, i) => (
+                                    <Badge key={i} className="bg-green-100 text-green-800">
+                                      {keyword}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                              
+                              <div>
+                                <h4 className="font-medium mb-2">Missing Keywords:</h4>
+                                <div className="flex flex-wrap gap-1">
+                                  {(resume.keywords_missing && typeof resume.keywords_missing === 'string'
+                                    ? JSON.parse(resume.keywords_missing)
+                                    : resume.missingKeywords || []).slice(0, 5).map((keyword, i) => (
+                                    <Badge key={i} className="bg-red-100 text-red-800">
+                                      {keyword}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className="flex justify-end">
+                              <Link to="/resume-upload">
+                                <Button size="sm" className="bg-interview-purple hover:bg-interview-darkPurple">
+                                  Upload New Version
+                                </Button>
+                              </Link>
+                            </div>
+                          </div>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </React.Fragment>
               ))}
             </TableBody>
           </Table>
