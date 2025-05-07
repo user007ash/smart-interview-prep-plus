@@ -64,7 +64,7 @@ const InterviewResultsSection = ({ results, loading }) => {
       ];
     } else {
       return [
-        "Reduce filler words like "um", "uh", and "like"",
+        "Reduce filler words like \"um\", \"uh\", and \"like\"",
         "Make your answers more specific with concrete examples",
         "Add relevant keywords from the job description",
         "Structure your responses using the STAR method"
