@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
@@ -7,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { validateResumeFile, analyzeResume } from '@/utils/resumeUtils';
+import { validateResumeFile, analyzeResume } from '@/utils/resume';
 
 // Component states
 const STATES = {
