@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -8,7 +8,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import StepManager from '../components/interview/StepManager';
 import useInterviewTimer from '../hooks/useInterviewTimer';
-import { getInterviewQuestions, calculateOverallScore, generateResults } from '../utils/interviewUtils';
+import { 
+  getInterviewQuestions, 
+  calculateOverallScore, 
+  generateResults,
+  fetchResumeBasedQuestions
+} from '../utils/interviewUtils';
 
 const InterviewTest = () => {
   const [step, setStep] = useState('intro'); // intro, preview, question, results
@@ -17,10 +22,10 @@ const InterviewTest = () => {
   const [currentAnswer, setCurrentAnswer] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [resultsData, setResultsData] = useState(null);
-  const { user, isAuthenticated, loading } = useAuth();
+  const [questions, setQuestions] = useState([]);
+  const [isLoadingQuestions, setIsLoadingQuestions] = useState(true);
   
-  // Get the interview questions
-  const questions = getInterviewQuestions();
+  const { user, isAuthenticated, loading } = useAuth();
   
   // Use custom timer hook
   const { timeLeft } = useInterviewTimer(
@@ -28,6 +33,39 @@ const InterviewTest = () => {
     step === 'question',
     handleNextQuestion
   );
+  
+  // Load questions with resume-awareness
+  useEffect(() => {
+    const loadQuestions = async () => {
+      setIsLoadingQuestions(true);
+      try {
+        // Try to fetch resume-based questions
+        if (user) {
+          const resumeQuestions = await fetchResumeBasedQuestions(user.id);
+          
+          if (resumeQuestions && resumeQuestions.length > 0) {
+            console.log('Using resume-based questions:', resumeQuestions);
+            setQuestions(getInterviewQuestions(resumeQuestions));
+          } else {
+            // Fallback to default questions
+            console.log('Using default questions');
+            setQuestions(getInterviewQuestions());
+          }
+        } else {
+          // Fallback to default questions if no user
+          setQuestions(getInterviewQuestions());
+        }
+      } catch (error) {
+        console.error('Error loading questions:', error);
+        // Fallback to default questions on error
+        setQuestions(getInterviewQuestions());
+      } finally {
+        setIsLoadingQuestions(false);
+      }
+    };
+    
+    loadQuestions();
+  }, [user]);
   
   // Check if user is authenticated
   if (!loading && !isAuthenticated) {
@@ -104,6 +142,7 @@ const InterviewTest = () => {
           ats_score: Math.round(overallATSScore),
           total_score: overallInterviewScore,
           feedback: JSON.stringify(results),
+          type: questions[0].type === 'Resume-Based' ? 'Resume-Based' : 'Practice'
         });
         
         if (error) {
@@ -162,7 +201,7 @@ const InterviewTest = () => {
       <Navbar />
       <div className="min-h-screen bg-gray-50 pt-24 pb-16">
         <div className="container mx-auto px-4">
-          {loading ? (
+          {loading || isLoadingQuestions ? (
             <div className="flex justify-center items-center h-64">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-interview-purple"></div>
             </div>

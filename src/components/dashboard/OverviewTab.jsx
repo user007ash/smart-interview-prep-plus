@@ -5,6 +5,10 @@ import MetricsCard from './MetricsCard';
 import InterviewResultsSection from './InterviewResultsSection';
 import ResumeSection from './ResumeSection';
 import WelcomeSection from './WelcomeSection';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
+import { formatDate } from '@/utils/dashboardUtils';
 
 const OverviewTab = ({ userData, testResults, resumes, dataLoading, metrics }) => {
   return (
@@ -12,6 +16,30 @@ const OverviewTab = ({ userData, testResults, resumes, dataLoading, metrics }) =
       {/* Welcome Message for new users or users with no data */}
       {(testResults.length === 0 || resumes.length === 0) && (
         <WelcomeSection userName={userData.name.split(' ')[0]} />
+      )}
+      
+      {/* Latest Resume Update - Show this only if there's at least one resume */}
+      {resumes.length > 0 && metrics.latestResume && (
+        <Card className="p-4 mb-6 border-l-4 border-l-interview-purple">
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="font-medium">Latest Resume: {metrics.latestResume.name}</h3>
+              <p className="text-sm text-gray-500">
+                Uploaded {formatDate(metrics.latestResume.uploadDate)} · 
+                ATS Score: <span className={metrics.latestResume.atsScore >= 80 ? 'text-green-600 font-medium' : 
+                                          metrics.latestResume.atsScore >= 60 ? 'text-yellow-600 font-medium' : 
+                                          'text-red-600 font-medium'}>
+                  {metrics.latestResume.atsScore}%
+                </span>
+              </p>
+            </div>
+            <Link to="/interview-test">
+              <Button className="bg-interview-purple hover:bg-interview-darkPurple">
+                Take Interview
+              </Button>
+            </Link>
+          </div>
+        </Card>
       )}
       
       {/* Dashboard Metrics */}
@@ -36,7 +64,7 @@ const OverviewTab = ({ userData, testResults, resumes, dataLoading, metrics }) =
           title="Tests Completed"
           value={metrics.testsCompleted}
           loading={dataLoading}
-          subtitle={metrics.testsCompleted > 0 ? `${resumes.length} Resumes` : "No tests yet"}
+          subtitle={metrics.testsCompleted > 0 ? `${resumes.length} Resume${resumes.length !== 1 ? 's' : ''}` : "No tests yet"}
         />
       </div>
       

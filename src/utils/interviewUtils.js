@@ -1,6 +1,16 @@
 
 // Function to get interview questions
-export const getInterviewQuestions = () => {
+export const getInterviewQuestions = (resumeQuestions = null) => {
+  // If resume-specific questions are provided, use them first
+  if (resumeQuestions && resumeQuestions.length > 0) {
+    return resumeQuestions.map((text, index) => ({
+      id: `rq${index + 1}`,
+      text,
+      type: 'Resume-Based'
+    }));
+  }
+  
+  // Default questions if no resume questions are available
   return [
     {
       id: 'q1',
@@ -219,6 +229,10 @@ const generateSmartFeedback = (answer, score, questionType) => {
     feedback += score > 80 
       ? 'You showed strong technical knowledge and problem-solving approach. '
       : 'Consider explaining your technical process more thoroughly and highlighting specific tools or methods you\'ve used. ';
+  } else if (questionType === 'Resume-Based') {
+    feedback += score > 80 
+      ? 'You effectively connected your resume experience to the question, showing strong alignment with the role. '
+      : 'Try to more clearly connect your past experience from your resume to demonstrate your qualifications. ';
   }
   
   // Add tips for improvement
@@ -274,4 +288,48 @@ export const generateResults = (answers, questions) => {
       type: question.type
     };
   });
+};
+
+/**
+ * Fetch resume-based interview questions for a user
+ * @param {string} userId - The user's ID
+ * @returns {Promise<Array>} - Array of interview questions or null if none available
+ */
+export const fetchResumeBasedQuestions = async (userId) => {
+  try {
+    if (!userId) return null;
+    
+    // Get the latest resume for the user
+    const { data, error } = await supabase
+      .from('resumes')
+      .select('interview_questions, keywords_found')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(1);
+      
+    if (error) {
+      console.error('Error fetching resume data for questions:', error);
+      return null;
+    }
+    
+    if (!data || data.length === 0) {
+      console.log('No resume found for user');
+      return null;
+    }
+    
+    // Parse interview questions
+    try {
+      const interviewQuestions = data[0].interview_questions 
+        ? JSON.parse(data[0].interview_questions)
+        : null;
+        
+      return interviewQuestions;
+    } catch (e) {
+      console.error('Error parsing interview questions:', e);
+      return null;
+    }
+  } catch (error) {
+    console.error('Error in fetchResumeBasedQuestions:', error);
+    return null;
+  }
 };

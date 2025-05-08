@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Info } from 'lucide-react';
+import { Info, FileText, Star } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
@@ -27,6 +27,33 @@ const ResumeSection = ({ resumes, loading }) => {
     if (score >= 80) return 'bg-green-100 text-green-800';
     if (score >= 70) return 'bg-yellow-100 text-yellow-800';
     return 'bg-red-100 text-red-800';
+  };
+
+  // Group improvements by category
+  const categorizeImprovements = (improvements = []) => {
+    const categories = {
+      keywords: [],
+      formatting: [],
+      content: [],
+      achievements: [],
+      other: []
+    };
+    
+    improvements.forEach(improvement => {
+      const lower = improvement.toLowerCase();
+      if (lower.includes('keyword') || lower.includes('skill'))
+        categories.keywords.push(improvement);
+      else if (lower.includes('format') || lower.includes('layout') || lower.includes('section'))
+        categories.formatting.push(improvement);
+      else if (lower.includes('content') || lower.includes('detail'))
+        categories.content.push(improvement);
+      else if (lower.includes('achievement') || lower.includes('metric') || lower.includes('quantif'))
+        categories.achievements.push(improvement);
+      else
+        categories.other.push(improvement);
+    });
+    
+    return categories;
   };
 
   if (loading) {
@@ -96,7 +123,12 @@ const ResumeSection = ({ resumes, loading }) => {
               {resumes.map((resume) => (
                 <React.Fragment key={resume.id}>
                   <TableRow className="hover:bg-gray-50 transition-colors">
-                    <TableCell className="font-medium">{resume.name || resume.file_name}</TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-gray-500" />
+                        {resume.name || resume.file_name}
+                      </div>
+                    </TableCell>
                     <TableCell>{formatDate(resume.uploadDate || resume.uploaded_at || resume.created_at)}</TableCell>
                     <TableCell>
                       <div className="flex items-center">
@@ -120,9 +152,9 @@ const ResumeSection = ({ resumes, loading }) => {
                         <Button variant="ghost" size="sm" className="text-interview-purple hover:text-interview-darkPurple hover:bg-interview-softBg" onClick={() => toggleExpand(resume.id)}>
                           {expandedResumeId === resume.id ? 'Hide Details' : 'View Details'}
                         </Button>
-                        <Link to={`/resume/${resume.id}`}>
+                        <Link to="/interview-test">
                           <Button variant="outline" size="sm" className="border-interview-purple text-interview-purple hover:bg-interview-softBg">
-                            View
+                            Start Interview
                           </Button>
                         </Link>
                       </div>
@@ -142,51 +174,33 @@ const ResumeSection = ({ resumes, loading }) => {
                                 </Badge>
                               </h3>
                               
-                              {resume.ats_feedback ? (
+                              {resume.atsScoreDetails || (resume.ats_feedback && typeof resume.ats_feedback === 'string') ? (
                                 <p className="text-gray-700">
-                                  {typeof resume.ats_feedback === 'string' 
-                                    ? JSON.parse(resume.ats_feedback).message 
-                                    : resume.ats_feedback.message || "Your resume has been analyzed for ATS compatibility."}
+                                  {resume.atsScoreDetails ? 
+                                    resume.atsScoreDetails.message : 
+                                    typeof resume.ats_feedback === 'string' ? 
+                                      JSON.parse(resume.ats_feedback).message : 
+                                      "Your resume has been analyzed for ATS compatibility."
+                                  }
                                 </p>
                               ) : (
                                 <p className="text-gray-700">
-                                  {resume.atsScore || resume.ats_score >= 85
+                                  {(resume.atsScore || resume.ats_score) >= 85
                                     ? "Your resume is well-optimized for ATS systems. Great use of relevant keywords and formatting."
-                                    : resume.atsScore || resume.ats_score >= 60
+                                    : (resume.atsScore || resume.ats_score) >= 60
                                     ? "Good resume, but you could add more role-specific keywords and achievements to improve ATS compatibility."
                                     : "Your resume needs significant improvement for ATS compatibility. Focus on formatting, keywords, and structure."}
                                 </p>
                               )}
                             </div>
                             
-                            <div>
-                              <h4 className="font-medium mb-2">Recommendations:</h4>
-                              <ul className="list-disc pl-5 space-y-1">
-                                {resume.ats_feedback && typeof resume.ats_feedback === 'string' ? (
-                                  JSON.parse(resume.ats_feedback).improvements?.map((improvement, i) => (
-                                    <li key={i} className="text-sm text-gray-700">{improvement}</li>
-                                  ))
-                                ) : resume.improvements ? (
-                                  resume.improvements.map((improvement, i) => (
-                                    <li key={i} className="text-sm text-gray-700">{improvement}</li>
-                                  ))
-                                ) : (
-                                  <>
-                                    <li className="text-sm text-gray-700">Add more industry-specific keywords</li>
-                                    <li className="text-sm text-gray-700">Use action verbs to describe your achievements</li>
-                                    <li className="text-sm text-gray-700">Ensure consistent formatting throughout</li>
-                                  </>
-                                )}
-                              </ul>
-                            </div>
-                            
-                            <div className="flex flex-wrap gap-2">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               <div>
                                 <h4 className="font-medium mb-2">Keywords Found:</h4>
                                 <div className="flex flex-wrap gap-1">
-                                  {(resume.keywords_found && typeof resume.keywords_found === 'string' 
-                                    ? JSON.parse(resume.keywords_found) 
-                                    : resume.keywords || []).slice(0, 8).map((keyword, i) => (
+                                  {(resume.keywords || 
+                                    (resume.keywords_found && typeof resume.keywords_found === 'string' ? 
+                                      JSON.parse(resume.keywords_found) : [])).slice(0, 8).map((keyword, i) => (
                                     <Badge key={i} className="bg-green-100 text-green-800">
                                       {keyword}
                                     </Badge>
@@ -197,9 +211,9 @@ const ResumeSection = ({ resumes, loading }) => {
                               <div>
                                 <h4 className="font-medium mb-2">Missing Keywords:</h4>
                                 <div className="flex flex-wrap gap-1">
-                                  {(resume.keywords_missing && typeof resume.keywords_missing === 'string'
-                                    ? JSON.parse(resume.keywords_missing)
-                                    : resume.missingKeywords || []).slice(0, 5).map((keyword, i) => (
+                                  {(resume.missingKeywords || 
+                                    (resume.keywords_missing && typeof resume.keywords_missing === 'string' ?
+                                      JSON.parse(resume.keywords_missing) : [])).slice(0, 5).map((keyword, i) => (
                                     <Badge key={i} className="bg-red-100 text-red-800">
                                       {keyword}
                                     </Badge>
@@ -208,9 +222,57 @@ const ResumeSection = ({ resumes, loading }) => {
                               </div>
                             </div>
                             
-                            <div className="flex justify-end">
-                              <Link to="/resume-upload">
+                            <div>
+                              <Collapsible>
+                                <h4 className="font-medium mb-2 flex items-center gap-2">
+                                  Improvement Recommendations:
+                                  <CollapsibleTrigger asChild>
+                                    <button className="text-sm font-normal text-interview-purple hover:underline">
+                                      (View all)
+                                    </button>
+                                  </CollapsibleTrigger>
+                                </h4>
+                                
+                                <ul className="list-disc pl-5 space-y-1">
+                                  {/* Show first 3 recommendations by default */}
+                                  {(resume.atsScoreDetails?.improvements || 
+                                    (resume.ats_feedback && typeof resume.ats_feedback === 'string' ? 
+                                      JSON.parse(resume.ats_feedback).improvements : []) || 
+                                    resume.improvements || []).slice(0, 3).map((improvement, i) => (
+                                    <li key={i} className="text-sm text-gray-700">{improvement}</li>
+                                  ))}
+                                </ul>
+                                
+                                <CollapsibleContent>
+                                  {/* Categorized improvements */}
+                                  {Object.entries(categorizeImprovements(
+                                    resume.atsScoreDetails?.improvements || 
+                                    (resume.ats_feedback && typeof resume.ats_feedback === 'string' ? 
+                                      JSON.parse(resume.ats_feedback).improvements : []) || 
+                                    resume.improvements || []
+                                  )).filter(([category, items]) => items.length > 0).map(([category, items]) => (
+                                    <div key={category} className="mt-3">
+                                      <h5 className="font-medium text-sm mb-1 capitalize">{category}:</h5>
+                                      <ul className="list-disc pl-5 space-y-1">
+                                        {items.map((item, i) => (
+                                          <li key={i} className="text-sm text-gray-700">{item}</li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  ))}
+                                </CollapsibleContent>
+                              </Collapsible>
+                            </div>
+                            
+                            <div className="flex justify-between items-center pt-2">
+                              <Link to="/interview-test">
                                 <Button size="sm" className="bg-interview-purple hover:bg-interview-darkPurple">
+                                  Take Resume-Based Interview
+                                </Button>
+                              </Link>
+                              
+                              <Link to="/resume-upload">
+                                <Button size="sm" variant="outline">
                                   Upload New Version
                                 </Button>
                               </Link>
