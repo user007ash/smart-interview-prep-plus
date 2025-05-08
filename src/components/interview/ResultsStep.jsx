@@ -1,9 +1,9 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Info } from 'lucide-react';
+import { calculateATSScore } from '@/utils/interviewUtils';
 
 const ResultsStep = ({ results }) => {
   const calculateOverallScore = (results) => {
