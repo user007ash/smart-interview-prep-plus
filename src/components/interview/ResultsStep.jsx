@@ -1,229 +1,280 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Info } from 'lucide-react';
-import { calculateATSScore } from '@/utils/interviewUtils';
+import { Info, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
+import { calculateATSScore, getATSFeedback } from '@/utils/interviewUtils';
 
 const ResultsStep = ({ results }) => {
   const calculateOverallScore = (results) => {
     if (!results || results.length === 0) return 0;
-    const totalScore = results.reduce((acc, result) => acc + result.score, 0);
-    return Math.round(totalScore / results.length);
+    const total = results.reduce((sum, result) => sum + (result.score || 0), 0);
+    return Math.round(total / results.length);
   };
 
-  const calculateOverallATSScore = (results) => {
-    if (!results || results.length === 0) return 0;
-    const atsScores = results.filter(r => r.ats_score !== undefined);
-    if (atsScores.length === 0) return 0;
-    const totalScore = atsScores.reduce((acc, result) => acc + result.ats_score, 0);
-    return Math.round(totalScore / atsScores.length);
+  const overallScore = calculateOverallScore(results);
+  const atsScore = calculateATSScore(results);
+  const atsFeedback = getATSFeedback(results);
+  
+  // Group feedback by score range
+  const strengthsAndWeaknesses = {
+    strengths: results.filter(r => r.score >= 80).map(r => r.question),
+    improvements: results.filter(r => r.score >= 60 && r.score < 80).map(r => r.question),
+    weaknesses: results.filter(r => r.score < 60).map(r => r.question)
   };
+  
+  // Aggregate suggestions across all answers
+  const allSuggestions = results.reduce((acc, result) => {
+    if (result.suggestions && result.suggestions.length > 0) {
+      return [...acc, ...result.suggestions];
+    }
+    return acc;
+  }, []);
+  
+  // Remove duplicate suggestions
+  const uniqueSuggestions = [...new Set(allSuggestions)];
 
   return (
-    <div className="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow-sm border border-gray-100">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold">Interview Results</h1>
-          <p className="text-gray-600">Here's how you performed on your practice interview</p>
-        </div>
-        
-        <div className="mt-4 md:mt-0 flex items-center gap-4">
-          <div>
-            <div className="text-3xl font-bold text-center">{calculateOverallScore(results)}%</div>
-            <div className="text-sm text-gray-500">Interview Score</div>
+    <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-sm border border-gray-100">
+      <div className="p-6 border-b border-gray-100">
+        <h1 className="text-2xl font-bold mb-2">Interview Results</h1>
+        <p className="text-gray-600">
+          Here's how you performed in your mock interview. Review your scores and feedback to improve for your next interview.
+        </p>
+      </div>
+      
+      <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Overall Score */}
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <h2 className="text-lg font-medium">Overall Score</h2>
+              <p className="text-sm text-gray-500">How well you performed overall</p>
+            </div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Info size={16} className="text-gray-400" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="max-w-xs">This score represents your overall interview performance based on the quality and relevance of your answers.</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
           
-          <div className="w-20 h-20">
-            <svg viewBox="0 0 36 36" className="circular-chart">
-              <path 
-                className="circle-bg"
-                d="M18 2.0845
-                  a 15.9155 15.9155 0 0 1 0 31.831
-                  a 15.9155 15.9155 0 0 1 0 -31.831"
-                fill="none"
-                stroke="#eee"
-                strokeWidth="3"
-              />
-              <path 
-                className="circle"
-                strokeDasharray={`${calculateOverallScore(results)}, 100`}
-                d="M18 2.0845
-                  a 15.9155 15.9155 0 0 1 0 31.831
-                  a 15.9155 15.9155 0 0 1 0 -31.831"
-                fill="none"
-                stroke="#7E69AB"
-                strokeWidth="3"
-              />
-            </svg>
+          <div className="flex justify-center">
+            <div className="relative w-36 h-36">
+              <svg className="circular-chart" viewBox="0 0 36 36">
+                <path
+                  className="circle-bg"
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                  stroke="#EAEAEA"
+                />
+                <path
+                  className="circle"
+                  strokeDasharray={`${overallScore}, 100`}
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                  stroke={
+                    overallScore >= 80 ? "#4CAF50" :
+                    overallScore >= 60 ? "#FF9800" : "#F44336"
+                  }
+                />
+                <text x="18" y="20.35" className="score-text text-center font-bold text-3xl fill-current" style={{ dominantBaseline: 'middle', textAnchor: 'middle' }}>
+                  {overallScore}%
+                </text>
+              </svg>
+            </div>
           </div>
-
-          <div>
-            <div className="text-3xl font-bold text-center">{calculateOverallATSScore(results)}%</div>
-            <div className="text-sm text-gray-500 flex items-center gap-1">
-              ATS Score
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button className="text-gray-400 hover:text-gray-600">
-                      <Info className="h-4 w-4" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-xs">
-                    <p>ATS Score measures how well your answers would perform in Applicant Tracking Systems by evaluating keyword usage, action verbs, and overall content quality.</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+        </div>
+        
+        {/* ATS Score */}
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <h2 className="text-lg font-medium">ATS Compatibility</h2>
+              <p className="text-sm text-gray-500">How well your answers would perform in ATS systems</p>
+            </div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Info size={16} className="text-gray-400" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="max-w-xs">This score indicates how well your answers would perform when processed by an Applicant Tracking System (ATS).</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+          
+          <div className="flex justify-center">
+            <div className="relative w-36 h-36">
+              <svg className="circular-chart" viewBox="0 0 36 36">
+                <path
+                  className="circle-bg"
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                  stroke="#EAEAEA"
+                />
+                <path
+                  className="circle"
+                  strokeDasharray={`${atsScore}, 100`}
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                  stroke={
+                    atsScore >= 80 ? "#4CAF50" :
+                    atsScore >= 60 ? "#FF9800" : "#F44336"
+                  }
+                />
+                <text x="18" y="20.35" className="score-text text-center font-bold text-3xl fill-current" style={{ dominantBaseline: 'middle', textAnchor: 'middle' }}>
+                  {atsScore}%
+                </text>
+              </svg>
             </div>
           </div>
         </div>
       </div>
       
-      <div className="mb-8">
-        <div className="bg-interview-softBg p-4 rounded-lg mb-4">
-          <h2 className="font-semibold mb-1">Overall Assessment</h2>
-          <p className="text-sm">
-            {calculateOverallScore(results) >= 80 
-              ? "Excellent performance! You demonstrated strong technical knowledge and communication skills. With some minor improvements, you'll be ready to ace your real interviews."
-              : calculateOverallScore(results) >= 70
-                ? "Good performance! You showed solid understanding of most topics. Work on being more specific in your examples and elaborating on technical details."
-                : "You have a good foundation, but need more practice. Focus on providing more specific examples and technical details in your answers."}
-          </p>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white p-4 border border-gray-200 rounded-lg">
-            <div className="text-lg font-bold text-center">{results.filter(r => r.score >= 80).length}</div>
-            <div className="text-sm text-gray-500 text-center">Strong Answers</div>
-            <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
-              <div 
-                className="bg-green-500 h-1.5 rounded-full" 
-                style={{ width: `${(results.filter(r => r.score >= 80).length / results.length) * 100}%` }}
-              ></div>
-            </div>
-          </div>
-          
-          <div className="bg-white p-4 border border-gray-200 rounded-lg">
-            <div className="text-lg font-bold text-center">{results.filter(r => r.score >= 70 && r.score < 80).length}</div>
-            <div className="text-sm text-gray-500 text-center">Good Answers</div>
-            <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
-              <div 
-                className="bg-yellow-500 h-1.5 rounded-full" 
-                style={{ width: `${(results.filter(r => r.score >= 70 && r.score < 80).length / results.length) * 100}%` }}
-              ></div>
-            </div>
-          </div>
-          
-          <div className="bg-white p-4 border border-gray-200 rounded-lg">
-            <div className="text-lg font-bold text-center">{results.filter(r => r.score < 70).length}</div>
-            <div className="text-sm text-gray-500 text-center">Needs Improvement</div>
-            <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
-              <div 
-                className="bg-red-500 h-1.5 rounded-full" 
-                style={{ width: `${(results.filter(r => r.score < 70).length / results.length) * 100}%` }}
-              ></div>
-            </div>
-          </div>
+      {/* ATS Feedback */}
+      <div className="px-6 pb-6">
+        <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 mb-6">
+          <h3 className="font-medium text-blue-800 mb-2">ATS Feedback</h3>
+          {atsFeedback.length > 0 ? (
+            <ul className="list-disc pl-5 space-y-1 text-blue-700 text-sm">
+              {atsFeedback.map((feedback, idx) => (
+                <li key={idx}>{feedback}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-blue-700 text-sm">No specific ATS feedback available.</p>
+          )}
         </div>
       </div>
       
-      <div className="space-y-6 mb-8">
-        <h2 className="text-xl font-semibold">Detailed Question Analysis</h2>
+      {/* Strengths and Areas for Improvement */}
+      <div className="px-6 pb-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Strengths */}
+        <div className="bg-green-50 border border-green-100 rounded-lg p-4">
+          <div className="flex items-center mb-3">
+            <CheckCircle size={18} className="text-green-600 mr-2" />
+            <h3 className="font-medium text-green-800">Your Strengths</h3>
+          </div>
+          
+          {strengthsAndWeaknesses.strengths.length > 0 ? (
+            <ul className="list-disc pl-5 space-y-1 text-green-700 text-sm">
+              {strengthsAndWeaknesses.strengths.map((question, idx) => (
+                <li key={idx}>{question}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-green-700 text-sm">No specific strengths identified.</p>
+          )}
+        </div>
         
-        {results.map((result, index) => (
-          <div key={index} className="border border-gray-200 rounded-lg overflow-hidden">
-            <div className="bg-gray-50 p-4 border-b border-gray-200">
-              <div className="flex justify-between items-center">
-                <h3 className="font-medium">Question {index + 1}</h3>
-                <div className="flex items-center gap-2">
-                  <div className={`px-2 py-1 rounded-full text-xs ${
-                    result.score >= 80 ? 'bg-green-100 text-green-800' : 
-                    result.score >= 70 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
-                  }`}>
-                    Interview: {result.score}%
-                  </div>
-                  {result.ats_score !== undefined && (
-                    <div className={`px-2 py-1 rounded-full text-xs ${
-                      result.ats_score >= 80 ? 'bg-blue-100 text-blue-800' : 
-                      result.ats_score >= 70 ? 'bg-indigo-100 text-indigo-800' : 'bg-purple-100 text-purple-800'
-                    }`}>
-                      ATS: {result.ats_score}%
-                    </div>
-                  )}
+        {/* Areas for Improvement */}
+        <div className="bg-yellow-50 border border-yellow-100 rounded-lg p-4">
+          <div className="flex items-center mb-3">
+            <AlertTriangle size={18} className="text-yellow-600 mr-2" />
+            <h3 className="font-medium text-yellow-800">Areas for Improvement</h3>
+          </div>
+          
+          {strengthsAndWeaknesses.improvements.length > 0 || strengthsAndWeaknesses.weaknesses.length > 0 ? (
+            <ul className="list-disc pl-5 space-y-1 text-yellow-700 text-sm">
+              {strengthsAndWeaknesses.improvements.map((question, idx) => (
+                <li key={idx}>{question}</li>
+              ))}
+              {strengthsAndWeaknesses.weaknesses.map((question, idx) => (
+                <li key={idx} className="text-red-700">{question}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-yellow-700 text-sm">No specific areas for improvement identified.</p>
+          )}
+        </div>
+      </div>
+      
+      {/* Key Suggestions */}
+      <div className="px-6 pb-6">
+        <div className="bg-purple-50 border border-purple-100 rounded-lg p-4">
+          <h3 className="font-medium text-interview-purple mb-3">Key Suggestions for Improvement</h3>
+          
+          {uniqueSuggestions.length > 0 ? (
+            <ul className="list-disc pl-5 space-y-2 text-gray-700 text-sm">
+              {uniqueSuggestions.slice(0, 5).map((suggestion, idx) => (
+                <li key={idx}>{suggestion}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-gray-700 text-sm">No specific suggestions available.</p>
+          )}
+        </div>
+      </div>
+      
+      {/* Detailed Question Responses */}
+      <div className="px-6 pb-6">
+        <h2 className="text-lg font-bold mb-4">Question-by-Question Breakdown</h2>
+        
+        <div className="space-y-4">
+          {results.map((result, idx) => (
+            <div key={idx} className="border border-gray-200 rounded-lg overflow-hidden">
+              <div className="flex items-center justify-between bg-gray-50 px-4 py-3">
+                <h3 className="font-medium">Question {idx + 1}</h3>
+                <span className={`px-2 py-1 text-xs rounded-full ${
+                  result.score >= 80 ? 'bg-green-100 text-green-800' :
+                  result.score >= 60 ? 'bg-yellow-100 text-yellow-800' : 
+                  'bg-red-100 text-red-800'
+                }`}>
+                  Score: {result.score}%
+                </span>
+              </div>
+              
+              <div className="p-4">
+                <div className="mb-3">
+                  <span className="text-sm font-medium text-gray-500">Question:</span>
+                  <p className="text-gray-800">{result.question}</p>
                 </div>
+                
+                <div className="mb-3">
+                  <span className="text-sm font-medium text-gray-500">Your Answer:</span>
+                  <p className="text-gray-800 text-sm bg-gray-50 p-2 rounded">{result.answer || 'No answer provided'}</p>
+                </div>
+                
+                <div className="mb-3">
+                  <span className="text-sm font-medium text-gray-500">Feedback:</span>
+                  <p className="text-gray-700 text-sm">{result.feedback}</p>
+                </div>
+                
+                {result.suggestions && result.suggestions.length > 0 && (
+                  <div>
+                    <span className="text-sm font-medium text-gray-500">Suggestions:</span>
+                    <ul className="list-disc pl-5 text-gray-700 text-sm">
+                      {result.suggestions.map((suggestion, idx) => (
+                        <li key={idx}>{suggestion}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
-              <p className="mt-2">{result.question}</p>
             </div>
-            
-            <div className="p-4">
-              <h4 className="text-sm font-medium text-gray-500 mb-1">Your Answer</h4>
-              <p className="text-gray-700 mb-4">{result.answer}</p>
-              
-              <h4 className="text-sm font-medium text-gray-500 mb-1">Interview Feedback</h4>
-              <p className="text-gray-700 mb-4">{result.feedback}</p>
-
-              {result.ats_feedback && (
-                <>
-                  <h4 className="text-sm font-medium text-gray-500 mb-1">ATS Feedback</h4>
-                  <p className="text-gray-700 mb-4">{result.ats_feedback}</p>
-                </>
-              )}
-              
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <h4 className="text-sm font-medium text-blue-800 mb-1">Ideal Answer Structure</h4>
-                <p className="text-blue-800 text-sm">{result.idealAnswer}</p>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-      
-      <div className="bg-interview-softBg p-6 rounded-lg mb-8">
-        <h2 className="font-semibold text-lg mb-4">Areas for Improvement</h2>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-white p-4 rounded-lg border border-gray-200">
-            <h3 className="font-medium mb-2">Be More Specific</h3>
-            <p className="text-gray-600 text-sm">
-              Include more concrete examples and metrics in your answers. Quantify achievements when possible.
-            </p>
-          </div>
-          
-          <div className="bg-white p-4 rounded-lg border border-gray-200">
-            <h3 className="font-medium mb-2">Use Action Verbs</h3>
-            <p className="text-gray-600 text-sm">
-              Incorporate strong action verbs like "led," "developed," "implemented" to make your answers more impactful.
-            </p>
-          </div>
-          
-          <div className="bg-white p-4 rounded-lg border border-gray-200">
-            <h3 className="font-medium mb-2">Structure Responses</h3>
-            <p className="text-gray-600 text-sm">
-              Use the STAR method for behavioral questions: Situation, Task, Action, Result.
-            </p>
-          </div>
-          
-          <div className="bg-white p-4 rounded-lg border border-gray-200">
-            <h3 className="font-medium mb-2">Reduce Filler Words</h3>
-            <p className="text-gray-600 text-sm">
-              Minimize using words like "um," "uh," "like," "you know" to sound more confident and professional.
-            </p>
-          </div>
+          ))}
         </div>
       </div>
       
-      <div className="flex flex-col md:flex-row justify-center gap-4">
-        <Link to="/interview-test">
-          <Button variant="outline" className="border-interview-purple text-interview-purple hover:bg-interview-softBg">
-            Try Another Practice Test
-          </Button>
-        </Link>
+      {/* Action Buttons */}
+      <div className="p-6 border-t border-gray-100 flex flex-col sm:flex-row justify-between space-y-4 sm:space-y-0 sm:space-x-4">
+        <Button 
+          variant="outline" 
+          className="border-interview-purple text-interview-purple hover:bg-interview-softBg"
+          asChild
+        >
+          <Link to="/dashboard">Go to Dashboard</Link>
+        </Button>
         
-        <Link to="/live-interview">
-          <Button className="bg-interview-purple hover:bg-interview-darkPurple">
-            Try Live Interview
-          </Button>
-        </Link>
+        <Button 
+          className="bg-interview-purple hover:bg-interview-darkPurple"
+          asChild
+        >
+          <Link to="/interview-test">Start New Interview</Link>
+        </Button>
       </div>
     </div>
   );

@@ -6,7 +6,8 @@ import {
   getInterviewQuestions, 
   calculateOverallScore, 
   generateResults,
-  fetchResumeBasedQuestions
+  fetchResumeBasedQuestions,
+  getPreviouslyUsedQuestions
 } from '../utils/interviewUtils';
 
 /**
@@ -23,27 +24,37 @@ const useInterviewState = (user) => {
   const [resultsData, setResultsData] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [isLoadingQuestions, setIsLoadingQuestions] = useState(true);
+  const [roleType, setRoleType] = useState(null);
+  const [previouslyUsedQuestions, setPreviouslyUsedQuestions] = useState([]);
 
-  // Load questions with resume-awareness
+  // Load questions with resume-awareness and track previously used questions
   useEffect(() => {
     const loadQuestions = async () => {
       setIsLoadingQuestions(true);
       try {
+        let previousQuestions = [];
+        
+        // Get previously used questions to avoid repetition if user is logged in
+        if (user) {
+          previousQuestions = await getPreviouslyUsedQuestions(user.id);
+          setPreviouslyUsedQuestions(previousQuestions);
+        }
+        
         // Try to fetch resume-based questions
         if (user) {
           const resumeQuestions = await fetchResumeBasedQuestions(user.id);
           
           if (resumeQuestions && resumeQuestions.length > 0) {
             console.log('Using resume-based questions:', resumeQuestions);
-            setQuestions(getInterviewQuestions(resumeQuestions));
+            setQuestions(getInterviewQuestions(resumeQuestions, roleType, previousQuestions));
           } else {
             // Fallback to default questions
             console.log('Using default questions');
-            setQuestions(getInterviewQuestions());
+            setQuestions(getInterviewQuestions(null, roleType, previousQuestions));
           }
         } else {
           // Fallback to default questions if no user
-          setQuestions(getInterviewQuestions());
+          setQuestions(getInterviewQuestions(null, roleType, previousQuestions));
         }
       } catch (error) {
         console.error('Error loading questions:', error);
@@ -55,7 +66,7 @@ const useInterviewState = (user) => {
     };
     
     loadQuestions();
-  }, [user]);
+  }, [user, roleType]);
 
   function handleStartPreview() {
     setStep('preview');
@@ -180,6 +191,11 @@ const useInterviewState = (user) => {
   const handleTranscriptUpdate = (transcript) => {
     setCurrentAnswer(transcript);
   };
+  
+  // Update interview role type
+  const setInterviewRoleType = (type) => {
+    setRoleType(type);
+  };
 
   return {
     step,
@@ -193,7 +209,8 @@ const useInterviewState = (user) => {
     handleStartPreview,
     handleStartTest,
     handleNextQuestion,
-    handleTranscriptUpdate
+    handleTranscriptUpdate,
+    setInterviewRoleType
   };
 };
 

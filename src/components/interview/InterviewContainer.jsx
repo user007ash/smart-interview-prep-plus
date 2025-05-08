@@ -25,11 +25,12 @@ const InterviewContainer = () => {
     handleTranscriptUpdate
   } = useInterviewState(user);
   
-  // Use custom timer hook
+  // Use custom timer hook with the currentQuestionIndex to reset on question change
   const { timeLeft } = useInterviewTimer(
     60, 
     step === 'question',
-    handleNextQuestion
+    handleNextQuestion,
+    currentQuestionIndex // Add currentQuestionIndex to dependencies
   );
   
   // Check if user is authenticated
