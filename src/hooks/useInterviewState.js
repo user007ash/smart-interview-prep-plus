@@ -7,7 +7,8 @@ import {
   calculateOverallScore, 
   generateResults,
   fetchResumeBasedQuestions,
-  getPreviouslyUsedQuestions
+  getPreviouslyUsedQuestions,
+  filterQuestionsByLanguage
 } from '../utils/interviewUtils';
 
 /**
@@ -25,6 +26,7 @@ const useInterviewState = (user) => {
   const [questions, setQuestions] = useState([]);
   const [isLoadingQuestions, setIsLoadingQuestions] = useState(true);
   const [roleType, setRoleType] = useState(null);
+  const [programmingLanguage, setProgrammingLanguage] = useState(null);
   const [previouslyUsedQuestions, setPreviouslyUsedQuestions] = useState([]);
 
   // Load questions with resume-awareness and track previously used questions
@@ -46,15 +48,52 @@ const useInterviewState = (user) => {
           
           if (resumeQuestions && resumeQuestions.length > 0) {
             console.log('Using resume-based questions:', resumeQuestions);
-            setQuestions(getInterviewQuestions(resumeQuestions, roleType, previousQuestions));
+            let allQuestions = getInterviewQuestions(resumeQuestions, roleType, previousQuestions);
+            
+            // Filter by programming language if specified
+            if (programmingLanguage) {
+              allQuestions = filterQuestionsByLanguage(allQuestions, programmingLanguage);
+              // Ensure we still have enough questions
+              if (allQuestions.length < 5) {
+                // If not enough language-specific questions, add general questions
+                const generalQuestions = getInterviewQuestions(resumeQuestions, roleType, previousQuestions);
+                allQuestions = [...allQuestions, ...generalQuestions.slice(0, 10 - allQuestions.length)];
+              }
+            }
+            
+            setQuestions(allQuestions);
           } else {
             // Fallback to default questions
             console.log('Using default questions');
-            setQuestions(getInterviewQuestions(null, roleType, previousQuestions));
+            let defaultQuestions = getInterviewQuestions(null, roleType, previousQuestions);
+            
+            // Filter by programming language if specified
+            if (programmingLanguage) {
+              defaultQuestions = filterQuestionsByLanguage(defaultQuestions, programmingLanguage);
+              // Ensure we still have enough questions
+              if (defaultQuestions.length < 5) {
+                const generalQuestions = getInterviewQuestions(null, roleType, previousQuestions);
+                defaultQuestions = [...defaultQuestions, ...generalQuestions.slice(0, 10 - defaultQuestions.length)];
+              }
+            }
+            
+            setQuestions(defaultQuestions);
           }
         } else {
           // Fallback to default questions if no user
-          setQuestions(getInterviewQuestions(null, roleType, previousQuestions));
+          let defaultQuestions = getInterviewQuestions(null, roleType, previousQuestions);
+          
+          // Filter by programming language if specified
+          if (programmingLanguage) {
+            defaultQuestions = filterQuestionsByLanguage(defaultQuestions, programmingLanguage);
+            // Ensure we still have enough questions
+            if (defaultQuestions.length < 5) {
+              const generalQuestions = getInterviewQuestions(null, roleType, previousQuestions);
+              defaultQuestions = [...defaultQuestions, ...generalQuestions.slice(0, 10 - defaultQuestions.length)];
+            }
+          }
+          
+          setQuestions(defaultQuestions);
         }
       } catch (error) {
         console.error('Error loading questions:', error);
@@ -66,7 +105,7 @@ const useInterviewState = (user) => {
     };
     
     loadQuestions();
-  }, [user, roleType]);
+  }, [user, roleType, programmingLanguage]);
 
   function handleStartPreview() {
     setStep('preview');
@@ -196,6 +235,11 @@ const useInterviewState = (user) => {
   const setInterviewRoleType = (type) => {
     setRoleType(type);
   };
+  
+  // Update interview programming language
+  const setInterviewLanguage = (language) => {
+    setProgrammingLanguage(language);
+  };
 
   return {
     step,
@@ -210,7 +254,8 @@ const useInterviewState = (user) => {
     handleStartTest,
     handleNextQuestion,
     handleTranscriptUpdate,
-    setInterviewRoleType
+    setInterviewRoleType,
+    setInterviewLanguage
   };
 };
 

@@ -15,6 +15,12 @@ const QUESTION_CATEGORIES = {
     PRODUCT_MANAGER: 'Product Management',
     DESIGN: 'Design',
     SALES: 'Sales',
+  },
+  // Add language-specific categories
+  PROGRAMMING_LANGUAGE: {
+    JAVA: 'Java',
+    JAVASCRIPT: 'JavaScript',
+    PYTHON: 'Python'
   }
 };
 
@@ -181,6 +187,126 @@ export const getInterviewQuestions = (resumeQuestions, roleType = null, previous
     }
   ];
   
+  // Add language-specific technical questions
+  const languageSpecificQuestions = {
+    // Java questions
+    [QUESTION_CATEGORIES.PROGRAMMING_LANGUAGE.JAVA]: [
+      {
+        id: 'java-1',
+        text: 'How would you implement a linked list in Java?',
+        type: QUESTION_CATEGORIES.PROGRAMMING_LANGUAGE.JAVA,
+        topic: 'DSA',
+        language: 'Java'
+      },
+      {
+        id: 'java-2',
+        text: 'What is the difference between `==` and `.equals()` in Java?',
+        type: QUESTION_CATEGORIES.PROGRAMMING_LANGUAGE.JAVA,
+        topic: 'Syntax',
+        language: 'Java'
+      },
+      {
+        id: 'java-3',
+        text: 'How do you handle exceptions using `try-catch-finally` in Java?',
+        type: QUESTION_CATEGORIES.PROGRAMMING_LANGUAGE.JAVA,
+        topic: 'Error Handling',
+        language: 'Java'
+      },
+      {
+        id: 'java-4',
+        text: 'Explain Java\'s memory management and garbage collection.',
+        type: QUESTION_CATEGORIES.PROGRAMMING_LANGUAGE.JAVA,
+        topic: 'Memory Management',
+        language: 'Java'
+      },
+      {
+        id: 'java-5',
+        text: 'What are the differences between abstract classes and interfaces in Java?',
+        type: QUESTION_CATEGORIES.PROGRAMMING_LANGUAGE.JAVA,
+        topic: 'OOP',
+        language: 'Java'
+      }
+    ],
+    
+    // JavaScript questions
+    [QUESTION_CATEGORIES.PROGRAMMING_LANGUAGE.JAVASCRIPT]: [
+      {
+        id: 'js-1',
+        text: 'How would you reverse a string in JavaScript without using built-in methods?',
+        type: QUESTION_CATEGORIES.PROGRAMMING_LANGUAGE.JAVASCRIPT,
+        topic: 'DSA',
+        language: 'JavaScript'
+      },
+      {
+        id: 'js-2',
+        text: 'Explain how JavaScript handles asynchronous errors.',
+        type: QUESTION_CATEGORIES.PROGRAMMING_LANGUAGE.JAVASCRIPT,
+        topic: 'Error Handling',
+        language: 'JavaScript'
+      },
+      {
+        id: 'js-3',
+        text: 'What\'s the difference between `var`, `let`, and `const`?',
+        type: QUESTION_CATEGORIES.PROGRAMMING_LANGUAGE.JAVASCRIPT,
+        topic: 'Syntax',
+        language: 'JavaScript'
+      },
+      {
+        id: 'js-4',
+        text: 'Explain closures in JavaScript and provide an example.',
+        type: QUESTION_CATEGORIES.PROGRAMMING_LANGUAGE.JAVASCRIPT,
+        topic: 'Advanced Concepts',
+        language: 'JavaScript'
+      },
+      {
+        id: 'js-5',
+        text: 'How does prototypal inheritance work in JavaScript?',
+        type: QUESTION_CATEGORIES.PROGRAMMING_LANGUAGE.JAVASCRIPT,
+        topic: 'OOP',
+        language: 'JavaScript'
+      }
+    ],
+    
+    // Python questions
+    [QUESTION_CATEGORIES.PROGRAMMING_LANGUAGE.PYTHON]: [
+      {
+        id: 'python-1',
+        text: 'Write a function in Python to check if a string is a palindrome.',
+        type: QUESTION_CATEGORIES.PROGRAMMING_LANGUAGE.PYTHON,
+        topic: 'DSA',
+        language: 'Python'
+      },
+      {
+        id: 'python-2',
+        text: 'How does Python handle exceptions? Give an example.',
+        type: QUESTION_CATEGORIES.PROGRAMMING_LANGUAGE.PYTHON,
+        topic: 'Error Handling',
+        language: 'Python'
+      },
+      {
+        id: 'python-3',
+        text: 'What is the time complexity of list append and pop operations in Python?',
+        type: QUESTION_CATEGORIES.PROGRAMMING_LANGUAGE.PYTHON,
+        topic: 'DSA',
+        language: 'Python'
+      },
+      {
+        id: 'python-4',
+        text: 'Explain the difference between lists and tuples in Python.',
+        type: QUESTION_CATEGORIES.PROGRAMMING_LANGUAGE.PYTHON,
+        topic: 'Data Structures',
+        language: 'Python'
+      },
+      {
+        id: 'python-5',
+        text: 'What are decorators in Python and how do you use them?',
+        type: QUESTION_CATEGORIES.PROGRAMMING_LANGUAGE.PYTHON,
+        topic: 'Advanced Concepts',
+        language: 'Python'
+      }
+    ]
+  };
+  
   // Role-specific questions
   const roleSpecificQuestions = {
     // Software engineering questions
@@ -315,6 +441,11 @@ export const getInterviewQuestions = (resumeQuestions, roleType = null, previous
     ...situationalQuestions
   ];
   
+  // Add language-specific questions (add a few from each language)
+  Object.values(languageSpecificQuestions).forEach(questions => {
+    allQuestions = [...allQuestions, ...questions];
+  });
+  
   // Add role-specific questions if a role is specified
   if (roleType && roleSpecificQuestions[roleType]) {
     allQuestions = [...allQuestions, ...roleSpecificQuestions[roleType]];
@@ -422,6 +553,10 @@ const analyzeKeywords = (answer, questionType) => {
     [QUESTION_CATEGORIES.TECHNICAL]: ['implement', 'develop', 'code', 'system', 'architecture', 'design', 'testing', 'debug', 'optimize'],
     [QUESTION_CATEGORIES.SITUATION]: ['handle', 'approach', 'resolve', 'strategy', 'solution', 'decision', 'prioritize', 'communication'],
     'Resume-Based': ['experience', 'skill', 'project', 'role', 'responsibility', 'achievement', 'contribution'],
+    // Add language-specific keywords
+    [QUESTION_CATEGORIES.PROGRAMMING_LANGUAGE.JAVA]: ['class', 'interface', 'extends', 'implements', 'exception', 'try', 'catch', 'finally', 'public', 'private', 'protected', 'static', 'override', 'abstract'],
+    [QUESTION_CATEGORIES.PROGRAMMING_LANGUAGE.JAVASCRIPT]: ['function', 'var', 'let', 'const', 'promise', 'async', 'await', 'callback', 'closure', 'prototype', 'this', 'arrow function', 'event loop'],
+    [QUESTION_CATEGORIES.PROGRAMMING_LANGUAGE.PYTHON]: ['def', 'class', 'self', 'list', 'tuple', 'dictionary', 'exception', 'try', 'except', 'finally', 'with', 'comprehension', 'lambda', 'decorator'],
     [QUESTION_CATEGORIES.ROLE_SPECIFIC.SOFTWARE_ENGINEER]: ['code', 'develop', 'architecture', 'framework', 'algorithm', 'solution', 'testing', 'debug', 'optimize'],
     [QUESTION_CATEGORIES.ROLE_SPECIFIC.MARKETING]: ['campaign', 'strategy', 'audience', 'metrics', 'brand', 'digital', 'analytics', 'conversion'],
     [QUESTION_CATEGORIES.ROLE_SPECIFIC.DATA_SCIENCE]: ['data', 'model', 'analysis', 'algorithm', 'prediction', 'insight', 'visualization', 'statistics'],
@@ -549,6 +684,24 @@ const generateSuggestions = (answer, question, questionType, wordCount, score) =
       }
       break;
       
+    case QUESTION_CATEGORIES.PROGRAMMING_LANGUAGE.JAVA:
+      if (!answer.toLowerCase().includes('example') && !answer.toLowerCase().includes('code')) {
+        suggestions.push("Include code examples or syntax to demonstrate your Java knowledge.");
+      }
+      break;
+      
+    case QUESTION_CATEGORIES.PROGRAMMING_LANGUAGE.JAVASCRIPT:
+      if (!answer.toLowerCase().includes('example') && !answer.toLowerCase().includes('code')) {
+        suggestions.push("Provide JavaScript code snippets to illustrate your points.");
+      }
+      break;
+      
+    case QUESTION_CATEGORIES.PROGRAMMING_LANGUAGE.PYTHON:
+      if (!answer.toLowerCase().includes('example') && !answer.toLowerCase().includes('code')) {
+        suggestions.push("Include Python code examples to demonstrate your understanding.");
+      }
+      break;
+      
     case 'Resume-Based':
       if (!answer.toLowerCase().includes('experience')) {
         suggestions.push("Connect your answer more directly to the experiences mentioned on your resume.");
@@ -565,6 +718,13 @@ const generateSuggestions = (answer, question, questionType, wordCount, score) =
   // Add a suggestion based on score
   if (score < 60) {
     suggestions.push("Practice articulating your thoughts more clearly with a structured approach to answering questions.");
+  }
+  
+  // Technical language-specific suggestions
+  if (questionType.includes('Java') || questionType.includes('JavaScript') || questionType.includes('Python')) {
+    if (!answer.toLowerCase().includes('complexity') && !answer.toLowerCase().includes('performance')) {
+      suggestions.push("Consider discussing time/space complexity or performance implications in your answer.");
+    }
   }
   
   // Ensure we always provide at least one suggestion
@@ -687,26 +847,4 @@ export const calculateATSScore = (results) => {
   }
   
   const atsScores = results.filter(r => r.ats_score !== undefined);
-  if (atsScores.length === 0) return 0;
-  
-  const totalScore = atsScores.reduce((acc, result) => acc + result.ats_score, 0);
-  return Math.round(totalScore / atsScores.length);
-};
-
-/**
- * Gets ATS feedback from interview results
- * @param {Array<Object>} results - An array of result objects
- * @returns {Array<string>} Array of ATS feedback strings
- */
-export const getATSFeedback = (results) => {
-  if (!results || results.length === 0) {
-    return [];
-  }
-  
-  return results
-    .filter(r => r.ats_feedback)
-    .map(r => r.ats_feedback)
-    .filter((feedback, index, self) => 
-      self.indexOf(feedback) === index
-    );
-};
+  if (atsScores.length === 0)

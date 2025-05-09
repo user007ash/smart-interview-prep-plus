@@ -22,7 +22,9 @@ const InterviewContainer = () => {
     handleStartPreview,
     handleStartTest,
     handleNextQuestion,
-    handleTranscriptUpdate
+    handleTranscriptUpdate,
+    setInterviewRoleType,
+    setInterviewLanguage
   } = useInterviewState(user);
   
   // Use custom timer hook with the currentQuestionIndex to reset on question change
@@ -61,6 +63,7 @@ const InterviewContainer = () => {
               onTranscriptUpdate={handleTranscriptUpdate}
               answers={answers}
               results={resultsData}
+              onSetLanguage={setInterviewLanguage}
             />
           )}
         </div>

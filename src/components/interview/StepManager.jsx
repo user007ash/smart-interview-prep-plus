@@ -19,11 +19,12 @@ const StepManager = ({
   currentAnswer,
   onTranscriptUpdate,
   answers,
-  results
+  results,
+  onSetLanguage
 }) => {
   switch (step) {
     case 'intro':
-      return <IntroStep onStartPreview={onStartPreview} />;
+      return <IntroStep onStartPreview={onStartPreview} onSetLanguage={onSetLanguage} />;
       
     case 'preview':
       return <PreviewStep questions={questions} onStartTest={onStartTest} />;
