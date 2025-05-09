@@ -1,4 +1,3 @@
-
 // Original imports from interviewUtils.js
 import { supabase } from '@/integrations/supabase/client';
 // Update imports to use the new resume module structure
@@ -177,7 +176,7 @@ export const getInterviewQuestions = (resumeQuestions, roleType = null, previous
     },
     {
       id: 'situational-5',
-      text: 'How would you adapt if your team's priorities suddenly changed?',
+      text: 'How would you adapt if your team\'s priorities suddenly changed?',
       type: QUESTION_CATEGORIES.SITUATION
     }
   ];
@@ -711,4 +710,3 @@ export const getATSFeedback = (results) => {
       self.indexOf(feedback) === index
     );
 };
-
