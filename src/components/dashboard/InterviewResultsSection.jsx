@@ -1,7 +1,8 @@
+
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { formatDate } from '@/utils/dashboardUtils';
-import { getATSFeedback, calculateATSScore } from '@/utils/interviewUtils';
+import { getATSFeedback, calculateATSScore } from '@/utils/interview/scoring';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
