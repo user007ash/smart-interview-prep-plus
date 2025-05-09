@@ -1,3 +1,4 @@
+
 // Original imports from interviewUtils.js
 import { supabase } from '@/integrations/supabase/client';
 // Update imports to use the new resume module structure
@@ -73,6 +74,20 @@ const shuffleArray = (array) => {
     [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
   }
   return newArray;
+};
+
+/**
+ * Filters questions by programming language
+ * @param {Array<Object>} questions - Array of question objects
+ * @param {string} language - Programming language to filter by
+ * @returns {Array<Object>} Filtered questions
+ */
+export const filterQuestionsByLanguage = (questions, language) => {
+  if (!language) return questions;
+  return questions.filter(q => 
+    q.language === language || 
+    !q.language // Include non-language specific questions
+  );
 };
 
 /**
@@ -847,4 +862,26 @@ export const calculateATSScore = (results) => {
   }
   
   const atsScores = results.filter(r => r.ats_score !== undefined);
-  if (atsScores.length === 0)
+  if (atsScores.length === 0) return 0;
+  
+  const totalScore = atsScores.reduce((acc, result) => acc + result.ats_score, 0);
+  return Math.round(totalScore / atsScores.length);
+};
+
+/**
+ * Gets ATS feedback from interview results
+ * @param {Array<Object>} results - An array of result objects
+ * @returns {Array<string>} Array of ATS feedback strings
+ */
+export const getATSFeedback = (results) => {
+  if (!results || results.length === 0) {
+    return [];
+  }
+  
+  return results
+    .filter(r => r.ats_feedback)
+    .map(r => r.ats_feedback)
+    .filter((feedback, index, self) => 
+      self.indexOf(feedback) === index
+    );
+};
