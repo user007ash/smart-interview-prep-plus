@@ -1,10 +1,10 @@
+
 import React from 'react';
 import IntroStep from './IntroStep';
 import PreviewStep from './PreviewStep';
 import QuestionStep from './QuestionStep';
 import SubmittingStep from './SubmittingStep';
 import ResultsStep from './ResultsStep';
-import { generateResults } from '@/utils/interview/resultGeneration';
 
 const StepManager = ({ 
   step, 
@@ -45,9 +45,7 @@ const StepManager = ({
       return <SubmittingStep />;
       
     case 'results':
-      // Use pregenerated results if available, otherwise generate them
-      const displayResults = results || generateResults(answers, questions);
-      return <ResultsStep results={displayResults} />;
+      return <ResultsStep results={results} />;
       
     default:
       return null;
