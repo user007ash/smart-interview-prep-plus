@@ -16,7 +16,7 @@ import { generateResults } from '../utils/interview/resultGeneration';
  * @returns {Object} Interview state and handler functions
  */
 const useInterviewState = (user) => {
-  const [step, setStep] = useState('intro'); // intro, preview, question, results
+  const [step, setStep] = useState('intro'); 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState({});
   const [currentAnswer, setCurrentAnswer] = useState('');

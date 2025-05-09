@@ -4,11 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const IntroStep = ({ onStartPreview, onSetLanguage = () => {} }) => {
-  const [selectedLanguage, setSelectedLanguage] = useState('');
+  const [selectedLanguage, setSelectedLanguage] = useState('none');
   
   const handleLanguageChange = (value) => {
     setSelectedLanguage(value);
-    onSetLanguage(value);
+    onSetLanguage(value === 'none' ? null : value);
   };
   
   return (
@@ -40,14 +40,14 @@ const IntroStep = ({ onStartPreview, onSetLanguage = () => {} }) => {
                 <SelectValue placeholder="Select a language (optional)" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Any / General</SelectItem>
+                <SelectItem value="none">Any / General</SelectItem>
                 <SelectItem value="Java">Java</SelectItem>
                 <SelectItem value="JavaScript">JavaScript</SelectItem>
                 <SelectItem value="Python">Python</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-xs text-gray-500 mt-1">
-              {selectedLanguage ? `Your interview will include ${selectedLanguage}-specific technical questions` : "Select a language to include language-specific technical questions"}
+              {selectedLanguage !== 'none' ? `Your interview will include ${selectedLanguage}-specific technical questions` : "Select a language to include language-specific technical questions"}
             </p>
           </div>
         </div>
