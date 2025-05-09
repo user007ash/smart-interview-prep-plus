@@ -1,6 +1,6 @@
 
 // Functions for generating interview results
-import { analyzeKeywords, analyzeStructure, analyzeClarity, analyzeATS } from './analyzeAnswers';
+import { analyzeATS, evaluateAnswer } from './analyzeAnswers';
 import { generateFeedback, generateSuggestions } from './feedbackGeneration';
 
 /**
@@ -13,45 +13,22 @@ export const generateResults = (answers, questions) => {
   return questions.map(question => {
     const answer = answers[question.id] || '';
     
-    if (!answer || answer.trim().length === 0) {
-      return {
-        question: question.text,
-        answer: '',
-        score: 0,
-        feedback: 'No answer was provided for this question.',
-        suggestions: ['Consider preparing an answer for this type of question.'],
-        ats_score: 0,
-        ats_feedback: 'No answer was analyzed.'
-      };
-    }
-    
-    // Mock analysis factors based on answer content
-    const wordCount = answer.split(/\s+/).length;
-    const hasKeywords = analyzeKeywords(answer, question.type);
-    const structureFactor = analyzeStructure(answer);
-    const clarityFactor = analyzeClarity(answer);
-    
-    // Calculate the score based on the analysis factors
-    let score = Math.min(100, 50 + hasKeywords + structureFactor + clarityFactor);
-    score = Math.max(40, score); // Minimum score is 40
-    
-    // Generate feedback based on the answer analysis
-    let feedback = generateFeedback(answer, question.text, question.type, wordCount, score);
-    
-    // Generate context-aware improvement suggestions
-    const suggestions = generateSuggestions(answer, question.text, question.type, wordCount, score);
+    // Use our new comprehensive evaluation function
+    const evaluation = evaluateAnswer(answer, question.text, question.type);
     
     // Generate ATS analysis
     const atsAnalysis = analyzeATS(answer, question.type);
     
+    // Build the result object
     return {
       question: question.text,
       answer: answer,
-      score: score,
-      feedback: feedback,
-      suggestions: suggestions,
+      score: evaluation.score,
+      feedback: evaluation.feedbacks.join(' '),
+      suggestions: evaluation.suggestions,
       ats_score: atsAnalysis.score,
-      ats_feedback: atsAnalysis.feedback
+      ats_feedback: atsAnalysis.feedback,
+      evaluation_details: evaluation.details // Add detailed evaluation metrics
     };
   });
 };

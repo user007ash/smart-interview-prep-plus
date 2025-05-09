@@ -1,6 +1,7 @@
 
 // Functions for generating feedback on answers
 import { QUESTION_CATEGORIES } from './categories';
+import { isEffectivelyEmpty } from './nlpAnalyzer';
 
 /**
  * Generates contextual feedback based on the answer analysis
@@ -12,6 +13,10 @@ import { QUESTION_CATEGORIES } from './categories';
  * @returns {string} Detailed feedback
  */
 export const generateFeedback = (answer, question, questionType, wordCount, score) => {
+  if (isEffectivelyEmpty(answer)) {
+    return `No answer was provided for this question.`;
+  }
+  
   if (score >= 85) {
     return `Excellent answer! You provided a comprehensive response that directly addressed the question with specific examples and clear communication.`;
   } else if (score >= 70) {
@@ -33,6 +38,11 @@ export const generateFeedback = (answer, question, questionType, wordCount, scor
  * @returns {Array<string>} Array of improvement suggestions
  */
 export const generateSuggestions = (answer, question, questionType, wordCount, score) => {
+  // Check if answer is empty
+  if (isEffectivelyEmpty(answer)) {
+    return ["Consider preparing an answer for this type of question."];
+  }
+  
   const suggestions = [];
   
   // Length-based suggestions

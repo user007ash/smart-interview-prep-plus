@@ -55,3 +55,83 @@ export const getATSFeedback = (results) => {
       self.indexOf(feedback) === index
     );
 };
+
+/**
+ * Identifies strengths from interview results
+ * @param {Array<Object>} results - An array of result objects
+ * @returns {Array<Object>} Array of strength areas with scores
+ */
+export const identifyStrengths = (results) => {
+  if (!results || results.length === 0) {
+    return [];
+  }
+  
+  // Look for high scoring questions (80+)
+  const strengths = results
+    .filter(r => r.score >= 80)
+    .map(r => ({
+      question: r.question,
+      score: r.score,
+      type: r.question_type || 'General'
+    }));
+    
+  return strengths;
+};
+
+/**
+ * Identifies areas for improvement from interview results
+ * @param {Array<Object>} results - An array of result objects
+ * @returns {Array<Object>} Array of improvement areas with scores
+ */
+export const identifyImprovements = (results) => {
+  if (!results || results.length === 0) {
+    return [];
+  }
+  
+  // Look for low/medium scoring questions (below 80)
+  const improvements = results
+    .filter(r => r.score < 80)
+    .map(r => ({
+      question: r.question,
+      score: r.score,
+      type: r.question_type || 'General',
+      priority: r.score < 60 ? 'High' : 'Medium' // Prioritize very low scores
+    }));
+    
+  return improvements;
+};
+
+/**
+ * Generates an aggregate list of suggestions from all results
+ * @param {Array<Object>} results - An array of result objects
+ * @returns {Array<string>} Array of unique, prioritized suggestions
+ */
+export const aggregateSuggestions = (results) => {
+  if (!results || results.length === 0) {
+    return [];
+  }
+  
+  // Collect all suggestions
+  const allSuggestions = results.reduce((suggestions, result) => {
+    if (result.suggestions && Array.isArray(result.suggestions)) {
+      return [...suggestions, ...result.suggestions];
+    }
+    return suggestions;
+  }, []);
+  
+  // Remove duplicates while preserving order
+  const uniqueSuggestions = [];
+  allSuggestions.forEach(suggestion => {
+    // Check if this suggestion or a very similar one exists
+    const exists = uniqueSuggestions.some(existing => 
+      existing.toLowerCase().includes(suggestion.toLowerCase()) ||
+      suggestion.toLowerCase().includes(existing.toLowerCase())
+    );
+    
+    if (!exists) {
+      uniqueSuggestions.push(suggestion);
+    }
+  });
+  
+  return uniqueSuggestions;
+};
