@@ -1,10 +1,9 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Info, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
-import { calculateATSScore, getATSFeedback } from '@/utils/interviewUtils';
+import { calculateATSScore, getATSFeedback } from '@/utils/interview/scoring';
 
 const ResultsStep = ({ results }) => {
   const calculateOverallScore = (results) => {

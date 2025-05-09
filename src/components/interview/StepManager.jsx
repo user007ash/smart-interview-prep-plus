@@ -1,11 +1,10 @@
-
 import React from 'react';
 import IntroStep from './IntroStep';
 import PreviewStep from './PreviewStep';
 import QuestionStep from './QuestionStep';
 import SubmittingStep from './SubmittingStep';
 import ResultsStep from './ResultsStep';
-import { generateResults } from '@/utils/interviewUtils';
+import { generateResults } from '@/utils/interview/resultGeneration';
 
 const StepManager = ({ 
   step, 
