@@ -72,20 +72,10 @@ export const generateSuggestions = (answer, question, questionType, wordCount, s
       break;
       
     case QUESTION_CATEGORIES.PROGRAMMING_LANGUAGE.JAVA:
-      if (!answer.toLowerCase().includes('example') && !answer.toLowerCase().includes('code')) {
-        suggestions.push("Include code examples or syntax to demonstrate your Java knowledge.");
-      }
-      break;
-      
     case QUESTION_CATEGORIES.PROGRAMMING_LANGUAGE.JAVASCRIPT:
-      if (!answer.toLowerCase().includes('example') && !answer.toLowerCase().includes('code')) {
-        suggestions.push("Provide JavaScript code snippets to illustrate your points.");
-      }
-      break;
-      
     case QUESTION_CATEGORIES.PROGRAMMING_LANGUAGE.PYTHON:
       if (!answer.toLowerCase().includes('example') && !answer.toLowerCase().includes('code')) {
-        suggestions.push("Include Python code examples to demonstrate your understanding.");
+        suggestions.push(`Include ${questionType} code examples or syntax to demonstrate your knowledge.`);
       }
       break;
       

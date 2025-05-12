@@ -5,7 +5,9 @@ import {
   evaluateAnswer, 
   isEffectivelyEmpty,
   analyzeKeywordsEnhanced,
-  analyzeStructureEnhanced 
+  analyzeStructureEnhanced,
+  analyzeCompleteness,
+  analyzeRelevance 
 } from './nlpAnalyzer';
 
 /**
@@ -15,6 +17,11 @@ import {
  * @returns {number} Score between 0-20 based on keyword relevance
  */
 export const analyzeKeywords = (answer, questionType) => {
+  // Safety check for empty answers
+  if (isEffectivelyEmpty(answer)) {
+    return 0;
+  }
+  
   // Use our enhanced keyword analyzer but adapt output to maintain API compatibility
   const result = analyzeKeywordsEnhanced(answer, questionType);
   return Math.round(result.score / 5); // Convert 0-100 to 0-20
@@ -26,6 +33,11 @@ export const analyzeKeywords = (answer, questionType) => {
  * @returns {number} Score between 0-15 based on structure quality
  */
 export const analyzeStructure = (answer) => {
+  // Safety check for empty answers
+  if (isEffectivelyEmpty(answer)) {
+    return 0;
+  }
+  
   // Use our enhanced structure analyzer but adapt output to maintain API compatibility
   const result = analyzeStructureEnhanced(answer);
   return Math.round((result.score / 100) * 15); // Convert 0-100 to 0-15
@@ -93,6 +105,10 @@ export const analyzeATS = (answer, questionType) => {
   const enhancedKeywords = analyzeKeywordsEnhanced(answer, questionType);
   score = Math.round(score * 0.7 + enhancedKeywords.score * 0.3);
   
+  // Check for relevance to the question
+  const relevance = analyzeRelevance(answer, questionType, questionType);
+  score = Math.round(score * 0.8 + relevance.score * 0.2);
+  
   // Cap the score
   score = Math.min(100, score);
   
@@ -109,5 +125,5 @@ export const analyzeATS = (answer, questionType) => {
   return { score, feedback };
 };
 
-// Export new comprehensive evaluation function
+// Export comprehensive evaluation function
 export { evaluateAnswer };

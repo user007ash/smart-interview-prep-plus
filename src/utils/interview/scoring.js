@@ -11,11 +11,20 @@ export const calculateOverallScore = (results) => {
     return 0;
   }
   
+  // Filter out invalid results
+  const validResults = results.filter(result => 
+    result && typeof result.score === 'number'
+  );
+  
+  if (validResults.length === 0) {
+    return 0;
+  }
+  
   // Sum up the individual scores
-  const totalScore = results.reduce((sum, result) => sum + (result.score || 0), 0);
+  const totalScore = validResults.reduce((sum, result) => sum + result.score, 0);
   
   // Calculate the average score
-  const averageScore = totalScore / results.length;
+  const averageScore = totalScore / validResults.length;
   
   // Round the average score to the nearest integer
   return Math.round(averageScore);
@@ -31,7 +40,7 @@ export const calculateATSScore = (results) => {
     return 0;
   }
   
-  const atsScores = results.filter(r => r.ats_score !== undefined);
+  const atsScores = results.filter(r => r && typeof r.ats_score === 'number');
   if (atsScores.length === 0) return 0;
   
   const totalScore = atsScores.reduce((acc, result) => acc + result.ats_score, 0);
@@ -49,10 +58,10 @@ export const getATSFeedback = (results) => {
   }
   
   return results
-    .filter(r => r.ats_feedback)
+    .filter(r => r && r.ats_feedback)
     .map(r => r.ats_feedback)
     .filter((feedback, index, self) => 
-      self.indexOf(feedback) === index
+      feedback && self.indexOf(feedback) === index
     );
 };
 
@@ -68,7 +77,7 @@ export const identifyStrengths = (results) => {
   
   // Look for high scoring questions (80+)
   const strengths = results
-    .filter(r => r.score >= 80)
+    .filter(r => r && r.score >= 80)
     .map(r => ({
       question: r.question,
       score: r.score,
@@ -90,7 +99,7 @@ export const identifyImprovements = (results) => {
   
   // Look for low/medium scoring questions (below 80)
   const improvements = results
-    .filter(r => r.score < 80)
+    .filter(r => r && r.score < 80)
     .map(r => ({
       question: r.question,
       score: r.score,
@@ -113,7 +122,7 @@ export const aggregateSuggestions = (results) => {
   
   // Collect all suggestions
   const allSuggestions = results.reduce((suggestions, result) => {
-    if (result.suggestions && Array.isArray(result.suggestions)) {
+    if (result && result.suggestions && Array.isArray(result.suggestions)) {
       return [...suggestions, ...result.suggestions];
     }
     return suggestions;
@@ -122,6 +131,8 @@ export const aggregateSuggestions = (results) => {
   // Remove duplicates while preserving order
   const uniqueSuggestions = [];
   allSuggestions.forEach(suggestion => {
+    if (!suggestion) return;
+    
     // Check if this suggestion or a very similar one exists
     const exists = uniqueSuggestions.some(existing => 
       existing.toLowerCase().includes(suggestion.toLowerCase()) ||
