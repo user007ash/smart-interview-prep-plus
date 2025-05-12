@@ -13,7 +13,7 @@ import {
 import { 
   evaluateAnswer,
   isEffectivelyEmpty 
-} from './nlpAnalyzer';
+} from './analysis';
 
 export {
   getInterviewQuestions,

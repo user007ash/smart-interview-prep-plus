@@ -8,7 +8,7 @@ import {
   analyzeStructureEnhanced,
   analyzeCompleteness,
   analyzeRelevance 
-} from './nlpAnalyzer';
+} from './analysis';
 
 /**
  * Analyzes the presence of keywords relevant to the question type
