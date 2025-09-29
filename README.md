@@ -57,10 +57,3 @@ src/
 - Meeting scheduling for peer interview practice
 - Industry-specific question banks
 
-## License
-
-MIT License
-
-## Contributors
-
-- Your Name
